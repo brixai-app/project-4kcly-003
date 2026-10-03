@@ -22,7 +22,7 @@ export default function Home({
 }: HomeProps) {
   const navigate = useNavigate();
   const [editingBanner, setEditingBanner] = useState<'banner1' | 'banner2' | null>(null);
-  const valuePillars = [{"title":"Fast Shipping","description":"Get your bottles quickly with reliable delivery.","icon":"truck"},{"title":"Quality Guarantee","description":"Premium materials and labels for durability.","icon":"shield"},{"title":"Easy Returns","description":"Hassle-free returns if you're not satisfied.","icon":"refresh"}];
+  const valuePillars = [{"title":"Fast Shipping","description":"Get your orders quickly with reliable delivery.","icon":"truck"},{"title":"Satisfaction Guarantee","description":"We ensure you love your custom bottle or your money back.","icon":"shield"},{"title":"Easy Returns","description":"Simple return process for hassle-free shopping.","icon":"refresh"}];
 
   const banner1 = siteContent?.banner1 || {
     title: 'Nishant Waters CLOTHING BRAND',
@@ -138,7 +138,7 @@ export default function Home({
             FEATURED PRODUCTS
           </h2>
           <p className="text-xs uppercase tracking-widest text-zinc-500 font-sans">
-            Hydrate Your Way
+            Hydrate Your Style
           </p>
         </div>
 

@@ -10,7 +10,7 @@ interface SearchOverlayProps {
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const searchSuggestions = ["custom water bottles","personalized labels","eco-friendly bottles","kids water bottles","insulated bottles"];
+  const searchSuggestions = ["custom water bottles","personalized labels","eco friendly bottles","gift bottles","hydration accessories"];
 
   if (!isOpen) return null;
 
