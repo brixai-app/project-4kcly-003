@@ -1,244 +1,192 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Heart, Shield, Truck, RefreshCw, Pencil } from 'lucide-react';
-import EditBannerModal from '../components/EditBannerModal';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { products } from '@/data/mockData';
+import ProductCard from '@/components/ProductCard';
 
-interface HomeProps {
-  products?: any[];
-  siteContent?: any;
-  onToggleWishlist: (product: any) => void;
-  wishlistIds: string[];
-  isAdminMode?: boolean;
-  onUpdateBanner?: (key: 'banner1' | 'banner2', updatedData: any) => void;
-}
-
-export default function Home({
-  products = [],
-  siteContent,
-  onToggleWishlist,
-  wishlistIds,
-  isAdminMode = false,
-  onUpdateBanner,
-}: HomeProps) {
-  const navigate = useNavigate();
-  const [editingBanner, setEditingBanner] = useState<'banner1' | 'banner2' | null>(null);
-  const valuePillars = [{"title":"Fast Shipping","description":"Get your orders quickly with reliable delivery.","icon":"truck"},{"title":"Satisfaction Guarantee","description":"We ensure you love your custom bottle or your money back.","icon":"shield"},{"title":"Easy Returns","description":"Simple return process for hassle-free shopping.","icon":"refresh"}];
-
-  const banner1 = siteContent?.banner1 || {
-    title: 'Nishant Waters CLOTHING BRAND',
-    subtitle: 'CATALOGUE N° 01 / EDITORIAL',
-    image: 'https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?q=80&w=1200&auto=format&fit=crop',
-    ctaText: 'SHOP NOW',
-  };
-
-  const banner2 = siteContent?.banner2 || {
-    title: 'NEW ARRIVALS',
-    subtitle: 'NEW ARRIVALS / SEASON 24',
-    image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=1200&auto=format&fit=crop',
-    ctaText: 'SHOP NOW',
-  };
-
-  const displayedProducts = products.length > 0 ? products.slice(0, 4) : [];
-
-  const getPillarIcon = (iconType: string) => {
-    switch (iconType) {
-      case 'shield': return <Shield size={20} />;
-      case 'refresh': return <RefreshCw size={20} />;
-      default: return <Truck size={20} />;
-    }
-  };
+export function Home() {
+  const featured = products?.filter((p) => p?.isFeatured)?.slice(0, 4) ?? [];
+  const shopAll = products?.slice(0, 6) ?? [];
 
   return (
-    <div className="bg-white text-zinc-900 pb-20 font-sans relative">
-      {/* 50/50 Dual Vertical Editorial Split Banner Hero */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-0 bg-black min-h-[85vh]">
-        {/* Left Column: Hero Banner 1 */}
-        <div className="relative min-h-[500px] md:min-h-[80vh] flex flex-col justify-end p-8 md:p-12 overflow-hidden group">
+    <div className="min-h-screen bg-[#0b1411] text-[#ecfdf5]">
+      <div className="relative">
+        <div className="relative h-[80vh] w-full overflow-hidden">
           <img
-            src={banner1.image}
-            alt={banner1.title}
-            className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-90"
+            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1400&q=85"
             crossOrigin="anonymous"
+            alt="Editorial water lookbook"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          
-          {isAdminMode && (
-            <button
-              onClick={() => setEditingBanner('banner1')}
-              className="absolute top-4 right-4 z-20 bg-white/90 hover:bg-white text-black p-2.5 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110"
-              title="Edit Left Hero Banner"
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0b1411] via-[#0b1411]/70 to-transparent" />
+          <div className="pointer-events-none absolute -left-32 top-10 h-80 w-80 rounded-full bg-[#10b981]/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full bg-[#10b981]/20 blur-3xl" />
+          <div className="relative z-10 mx-auto flex h-full max-w-6xl items-center px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: 'easeOut' }}
+              className="max-w-xl space-y-6"
             >
-              <Pencil size={18} />
-            </button>
-          )}
-
-          <div className="relative z-10 space-y-3">
-            <span className="text-[11px] font-mono font-bold tracking-widest text-zinc-300 uppercase block">
-              {banner1.subtitle}
-            </span>
-            <h1 className="text-3xl md:text-5xl font-sans font-black uppercase text-white tracking-tight leading-none">
-              {banner1.title}
-            </h1>
-            <div className="pt-2">
-              <Link
-                to="/shop"
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white hover:text-zinc-300 transition-colors"
-              >
-                <span>{banner1.ctaText}</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
+              <p className="text-xs font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase">
+                NISHANT WATERS
+              </p>
+              <h1 className="font-['Playfair_Display'] text-6xl md:text-7xl leading-tight tracking-tight">
+                Water, written
+                <br />
+                in your language.
+              </h1>
+              <p className="max-w-md text-sm md:text-base text-[#a7d7c4] font-['Plus_Jakarta_Sans']">
+                Eco-forward, custom-labeled bottles crafted for studios, galleries, and gatherings
+                that care about every detail.
+              </p>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/shop"
+                  className="inline-flex items-center gap-2 rounded-md bg-[#10b981] px-6 py-3 text-sm font-semibold tracking-[0.2em] text-black uppercase hover:bg-[#0ea371] transition-colors"
+                >
+                  Explore Collection
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  to="/shop?category=Limited"
+                  className="text-xs font-semibold tracking-[0.2em] text-[#a7d7c4] uppercase hover:text-[#ecfdf5] transition-colors"
+                >
+                  Limited mineral edits
+                </Link>
+              </div>
+            </motion.div>
           </div>
         </div>
 
-        {/* Right Column: Hero Banner 2 */}
-        <div className="relative min-h-[500px] md:min-h-[80vh] flex flex-col justify-end p-8 md:p-12 overflow-hidden group">
-          <img
-            src={banner2.image}
-            alt={banner2.title}
-            className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-90"
-            crossOrigin="anonymous"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-          {isAdminMode && (
-            <button
-              onClick={() => setEditingBanner('banner2')}
-              className="absolute top-4 right-4 z-20 bg-white/90 hover:bg-white text-black p-2.5 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110"
-              title="Edit Right Hero Banner"
-            >
-              <Pencil size={18} />
-            </button>
-          )}
-
-          <div className="relative z-10 space-y-3">
-            <span className="text-[11px] font-mono font-bold tracking-widest text-zinc-300 uppercase block">
-              {banner2.subtitle}
-            </span>
-            <h2 className="text-3xl md:text-5xl font-sans font-black uppercase text-white tracking-tight leading-none">
-              {banner2.title}
-            </h2>
-            <div className="pt-2">
-              <Link
-                to="/shop"
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white hover:text-zinc-300 transition-colors"
+        <section className="mx-auto -mt-12 max-w-6xl space-y-12 px-6 pb-20">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                title: 'Circular by design',
+                body: 'Aluminum and glass-first silhouettes, refillable and infinitely recyclable.',
+              },
+              {
+                title: 'Custom label atelier',
+                body: 'Typeface-perfect labels tuned to your event, gallery, or studio identity.',
+              },
+              {
+                title: 'Carbon-neutral delivery',
+                body: 'Chilled, on-time drops with emissions balanced on every order.',
+              },
+            ].map((item) => (
+              <div
+                key={item?.title ?? ''}
+                className="rounded-2xl bg-[#14241e] border border-[#244337] px-5 py-6"
               >
-                <span>{banner2.ctaText}</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
+                <p className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase mb-3">
+                  {item?.title ?? ''}
+                </p>
+                <p className="text-sm text-[#ecfdf5]/90 font-['Plus_Jakarta_Sans']">
+                  {item?.body ?? ''}
+                </p>
+              </div>
+            ))}
           </div>
-        </div>
-      </section>
 
-      {/* Featured Products Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-20">
-        <div className="text-center space-y-2 mb-12">
-          <h2 className="text-3xl md:text-4xl font-sans font-black uppercase tracking-tight text-zinc-900">
-            FEATURED PRODUCTS
-          </h2>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 font-sans">
-            Hydrate Your Style
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
-          {displayedProducts.map((product: any) => {
-            const isWishlisted = wishlistIds.includes(product.id);
-            return (
-              <div key={product.id} className="group flex flex-col space-y-3 relative">
-                <div className="relative aspect-[3/4] bg-zinc-100 overflow-hidden rounded-none border border-zinc-200">
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    crossOrigin="anonymous"
+          <section className="grid gap-6 md:grid-cols-[1.3fr,1fr] items-stretch">
+            <div className="rounded-2xl bg-[#14241e] border border-[#244337] p-5 flex flex-col">
+              <div className="flex items-baseline justify-between mb-4">
+                <h2 className="font-['Playfair_Display'] text-2xl tracking-tight">
+                  Featured vessels
+                </h2>
+                <span className="text-[10px] tracking-[0.25em] text-[#a7d7c4] uppercase">
+                  CURATED DROP
+                </span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {featured?.map((product) => (
+                  <ProductCard
+                    key={product?.id ?? ''}
+                    product={product}
+                    showQuickAdd
+                    className="h-full"
                   />
-                  {product.tag && (
-                    <span className="absolute top-3 left-3 bg-black text-white text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 font-mono">
-                      {product.tag}
-                    </span>
-                  )}
-
-                  {isAdminMode && (
-                    <button
-                      onClick={() => navigate('/admin/products')}
-                      className="absolute top-3 right-12 z-10 bg-white/90 backdrop-blur p-1.5 rounded-full border border-gray-200 shadow-xs cursor-pointer hover:bg-black hover:text-white transition-colors"
-                      title="Edit product"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => onToggleWishlist(product)}
-                    className="absolute top-3 right-3 z-10 bg-white/80 hover:bg-white p-2 rounded-full text-zinc-900 transition-colors shadow-xs"
-                    aria-label="Wishlist"
-                  >
-                    <Heart size={16} className={isWishlisted ? 'fill-black text-black' : ''} />
-                  </button>
-
-                  <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
-                    <button
-                      onClick={() => navigate('/product/' + product.id)}
-                      className="w-full bg-white text-black hover:bg-zinc-100 text-xs font-bold uppercase tracking-widest py-3 transition-colors text-center"
-                    >
-                      QUICK VIEW
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col space-y-1">
-                  <span className="text-[10px] font-mono font-semibold text-zinc-400 uppercase tracking-widest">
-                    {product.category}
-                  </span>
-                  <Link
-                    to={'/product/' + product.id}
-                    className="text-xs font-bold uppercase tracking-wider text-zinc-900 hover:text-zinc-600 transition-colors line-clamp-1"
-                  >
-                    {product.title}
-                  </Link>
-                  <span className="text-xs font-bold font-mono text-zinc-900">
-                    ${product.price?.toFixed(2)}
-                  </span>
-                </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Value Pillars Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-24">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-b border-zinc-200 py-12">
-          {valuePillars.map((pillar: any, idx: number) => (
-            <div key={idx} className="flex items-start space-x-4">
-              <div className="p-3 bg-zinc-100 text-zinc-900 rounded-none border border-zinc-200">
-                {getPillarIcon(pillar.icon)}
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900">
-                  {pillar.title}
-                </h4>
-                <p className="text-xs text-zinc-500 leading-relaxed font-sans">
-                  {pillar.description}
+            </div>
+            <div className="relative overflow-hidden rounded-2xl bg-[#14241e] border border-[#244337]">
+              <img
+                src="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&q=85"
+                crossOrigin="anonymous"
+                alt="Mineral water still life"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1411] via-[#0b1411]/60 to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5 space-y-2">
+                <p className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase">
+                  STUDIO SERVICE
+                </p>
+                <p className="font-['Playfair_Display'] text-xl">
+                  Palette-matched labels for openings and residencies.
+                </p>
+                <p className="text-xs text-[#a7d7c4]">
+                  Submit your brand assets at checkout and our team will tune the label for print.
                 </p>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
 
-      {/* Edit Banner Modal */}
-      <EditBannerModal
-        isOpen={!!editingBanner}
-        onClose={() => setEditingBanner(null)}
-        bannerKey={editingBanner}
-        currentData={editingBanner === 'banner1' ? banner1 : banner2}
-        onSave={(key, data) => {
-          if (onUpdateBanner) onUpdateBanner(key, data);
-        }}
-      />
+          <section className="space-y-5">
+            <div className="flex items-end justify-between">
+              <div>
+                <h2 className="font-['Playfair_Display'] text-2xl tracking-tight">
+                  Shop the selection
+                </h2>
+                <p className="text-xs text-[#a7d7c4]">
+                  Still, sparkling, and flavored edits ready for your next gathering.
+                </p>
+              </div>
+              <Link
+                to="/shop"
+                className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase hover:text-[#ecfdf5] transition-colors"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {shopAll?.map((product) => (
+                <ProductCard
+                  key={product?.id ?? ''}
+                  product={product}
+                  showQuickAdd
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#244337] bg-[#14241e] px-5 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="h-7 w-7 rounded-md bg-[#10b981] text-black flex items-center justify-center text-xs font-semibold">
+                NW
+              </span>
+              <div>
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-[#a7d7c4]">
+                  ANNOUNCEMENT
+                </p>
+                <p className="text-sm">
+                  Complimentary label proofs on all orders above ₹12,000. Free chilled delivery at
+                  ₹18,000.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/shop?category=Bundle"
+              className="text-[10px] font-semibold tracking-[0.25em] uppercase text-[#ecfdf5] hover:text-[#10b981] transition-colors"
+            >
+              Browse service bundles
+            </Link>
+          </section>
+        </section>
+      </div>
     </div>
   );
 }
+
+export default Home;

@@ -1,212 +1,237 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, ShoppingCart } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { motion } from 'framer-motion';
+import { Menu, X, ShoppingBag, ChevronDown, Search } from 'lucide-react';
+import { categories } from '@/data/mockData';
+import { useCart } from '@/context/CartContext';
+import { CartDrawer } from '@/components/CartDrawer';
+import { cn } from '@/lib/utils';
 
-const NAV_LINKS = [
-  { label: 'Home', to: '/' },
-  { label: 'Shop', to: '/shop' },
-  { label: 'About', to: '/about' },
-  { label: 'Contact', to: '/contact' },
-]
-
-function getCartCount() {
-  try {
-    const c = window.localStorage.getItem('nishantwaters_cart')
-    if (!c) return 0
-    const obj = JSON.parse(c)
-    return Object.values(obj).reduce((sum: number, v: any) => sum + (v?.qty ?? 0), 0)
-  } catch {
-    return 0
-  }
+export interface HeaderProps {
+  className?: string;
 }
 
-function Header() {
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [cartCount, setCartCount] = useState(getCartCount())
-  const location = useLocation()
-  const navigate = useNavigate()
-  const mobileMenuRef = useRef<HTMLDivElement>(null)
+function Header({ className = '' }: HeaderProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { totals, openCart } = useCart();
+  const [mobileOpen, setMobileOpen] = React.useState<boolean>(false);
+  const [search, setSearch] = React.useState<string>('');
+  const [drawerKey, setDrawerKey] = React.useState<number>(0);
 
-  useEffect(() => {
-    setMobileOpen(false)
-  }, [location.pathname])
+  const itemCount = totals?.itemCount ?? 0;
 
-  useEffect(() => {
-    function handleStorage() {
-      setCartCount(getCartCount())
-    }
-    window.addEventListener('storage', handleStorage)
-    const interval = setInterval(handleStorage, 1200)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      clearInterval(interval)
-    }
-  }, [])
+  const isActivePath = (path: string) => location?.pathname === path;
 
-  useEffect(() => {
-    setCartCount(getCartCount())
-  }, [location.pathname])
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = search?.trim() ?? '';
+    const params = new URLSearchParams();
+    if (trimmed) params.set('q', trimmed);
+    navigate(`/shop${params.toString() ? `?${params.toString()}` : ''}`);
+    setMobileOpen(false);
+  };
 
-  useEffect(() => {
-    if (!mobileOpen) return
-    function handleClick(e: MouseEvent) {
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(e.target as Node)
-      ) {
-        setMobileOpen(false)
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === 'Escape') setMobileOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [mobileOpen])
+  const handleCartClick = () => {
+    setDrawerKey((k) => k + 1);
+    openCart();
+  };
+
+  const navLinkBase =
+    'text-sm font-medium tracking-wide uppercase transition-colors';
+  const navLinkActive = 'text-emerald-300';
+  const navLinkInactive = 'text-[#a7d7c4] hover:text-emerald-200';
+
+  const categoryItems = categories ?? [];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link
-          to="/"
-          className="flex items-center gap-2 group"
-          aria-label="Nishant Waters Home"
-        >
-          <span className="inline-block w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 via-sky-400 to-cyan-600 flex items-center justify-center shadow-sm">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <ellipse cx="12" cy="12" rx="10" ry="10" fill="#38bdf8" />
-              <path d="M12 4c2.5 3.5 6 7.5 6 11a6 6 0 11-12 0c0-3.5 3.5-7.5 6-11z" fill="#e0f7fa" />
-              <ellipse cx="12" cy="15" rx="3.5" ry="2" fill="#bae6fd" />
-            </svg>
-          </span>
-          <span className="text-lg md:text-xl font-serif font-extrabold tracking-tighter text-slate-900 group-hover:text-cyan-700 transition-colors">
-            Nishant Waters
-          </span>
-        </Link>
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-          {NAV_LINKS.map(link => (
+    <>
+      <header
+        className={cn(
+          'sticky top-0 z-40 border-b border-[#244337] bg-[#0b1411]/80 backdrop-blur-xl',
+          className,
+        )}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-[#244337] text-[#ecfdf5] hover:bg-[#14241e] sm:hidden"
+              onClick={() => setMobileOpen((prev) => !prev)}
+            >
+              {mobileOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
             <Link
-              key={link.to}
-              to={link.to}
+              to="/"
+              className="flex items-center gap-3"
+              onClick={() => setMobileOpen(false)}
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500 text-black shadow-lg shadow-emerald-500/30">
+                <span className="text-xl font-semibold leading-none">N</span>
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="font-display text-lg font-semibold tracking-tight text-[#ecfdf5]">
+                  Nishant Waters
+                </span>
+                <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#a7d7c4]">
+                  Custom Bottled Atelier
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          <nav className="hidden items-center gap-8 sm:flex">
+            <Link
+              to="/"
               className={cn(
-                'transition-colors hover:text-cyan-700 px-2 py-1 rounded-lg',
-                location.pathname === link.to && 'text-cyan-700 font-semibold bg-cyan-50'
+                navLinkBase,
+                isActivePath('/') ? navLinkActive : navLinkInactive,
               )}
             >
-              {link.label}
+              Home
             </Link>
-          ))}
-          <button
-            type="button"
-            className={cn(
-              'ml-2 inline-flex items-center px-5 py-2 rounded-xl font-semibold text-base',
-              'bg-gradient-to-b from-slate-900 to-black hover:from-slate-800 hover:to-slate-950 text-white shadow-sm',
-              'border border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 relative'
-            )}
-            onClick={() => navigate('/shop')}
-          >
-            Shop Now
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'ml-2 relative inline-flex items-center px-3 py-2 rounded-xl font-semibold text-base',
-              'bg-white border border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300',
-              'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0'
-            )}
-            aria-label="View cart"
-            onClick={() => navigate('/cart')}
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-cyan-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </nav>
-        <div className="md:hidden flex items-center gap-2">
-          <button
-            type="button"
-            className={cn(
-              'relative inline-flex items-center px-3 py-2 rounded-xl font-semibold text-base',
-              'bg-white border border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300',
-              'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0'
-            )}
-            aria-label="View cart"
-            onClick={() => navigate('/cart')}
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-cyan-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
-                {cartCount}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'ml-1 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:border-cyan-300 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0'
-            )}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMobileOpen(o => !o)}
-          >
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            ref={mobileMenuRef}
-            initial={{ opacity: 0, y: -24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -24 }}
-            transition={{ duration: 0.32, ease: 'easeOut' }}
-            className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-lg"
-          >
-            <nav className="flex flex-col gap-1 px-6 py-4">
-              {NAV_LINKS.map(link => (
-                <Link
-                  key={link.to}
-                  to={link.to}
+            <Link
+              to="/shop"
+              className={cn(
+                navLinkBase,
+                isActivePath('/shop') ? navLinkActive : navLinkInactive,
+              )}
+            >
+              Shop
+            </Link>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
                   className={cn(
-                    'block px-4 py-3 rounded-lg text-base font-semibold transition-colors',
-                    location.pathname === link.to
-                      ? 'bg-cyan-50 text-cyan-700'
-                      : 'text-slate-700 hover:bg-cyan-50 hover:text-cyan-700'
+                    navLinkBase,
+                    'inline-flex items-center gap-1',
+                    navLinkInactive,
                   )}
-                  onClick={() => setMobileOpen(false)}
                 >
-                  {link.label}
-                </Link>
-              ))}
-              <button
-                type="button"
-                className={cn(
-                  'mt-2 w-full flex items-center justify-center px-4 py-3 rounded-xl font-semibold text-base',
-                  'bg-gradient-to-b from-slate-900 to-black hover:from-slate-800 hover:to-slate-950 text-white shadow-sm',
-                  'border border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0'
-                )}
-                onClick={() => {
-                  setMobileOpen(false)
-                  navigate('/shop')
-                }}
+                  Collections
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content
+                sideOffset={8}
+                className="min-w-[180px] rounded-xl border border-[#244337] bg-[#14241e] p-1 shadow-xl"
               >
-                Shop Now
-              </button>
-            </nav>
-          </motion.div>
+                {categoryItems.map((cat) => (
+                  <DropdownMenu.Item
+                    key={cat}
+                    className="cursor-pointer rounded-lg px-3 py-2 text-sm text-[#ecfdf5] outline-none hover:bg-[#0b1411]"
+                    onSelect={() => navigate(`/shop?category=${encodeURIComponent(cat)}`)}
+                  >
+                    {cat}
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </nav>
+
+          <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="hidden max-w-xs flex-1 items-center rounded-full border border-[#244337] bg-[#0b1411] px-3 py-1.5 text-sm text-[#ecfdf5] sm:flex"
+            >
+              <Search className="mr-2 h-4 w-4 text-[#a7d7c4]" />
+              <input
+                aria-label="Search bottles"
+                className="h-6 flex-1 bg-transparent text-xs outline-none placeholder:text-[#4b6b5a]"
+                placeholder="Search bottles, flavors, or glass..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value ?? '')}
+              />
+            </form>
+
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              className="relative flex h-10 w-10 items-center justify-center rounded-md border border-[#244337] bg-[#14241e] text-[#ecfdf5] transition hover:border-emerald-500 hover:text-emerald-300"
+              onClick={handleCartClick}
+              aria-label="Open cart"
+            >
+              <ShoppingBag className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.2rem] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-semibold text-black">
+                  {itemCount > 9 ? '9+' : itemCount}
+                </span>
+              )}
+            </motion.button>
+          </div>
+        </div>
+
+        {mobileOpen && (
+          <div className="border-t border-[#244337] bg-[#0b1411] px-4 pb-4 pt-2 sm:hidden">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="mb-3 flex items-center rounded-full border border-[#244337] bg-[#0b1411] px-3 py-1.5 text-sm text-[#ecfdf5]"
+            >
+              <Search className="mr-2 h-4 w-4 text-[#a7d7c4]" />
+              <input
+                aria-label="Search bottles"
+                className="h-6 flex-1 bg-transparent text-xs outline-none placeholder:text-[#4b6b5a]"
+                placeholder="Search bottles, flavors, or glass..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value ?? '')}
+              />
+            </form>
+            <div className="flex flex-col gap-1">
+              <Link
+                to="/"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  'rounded-md px-2 py-2 text-sm font-medium uppercase tracking-[0.18em]',
+                  isActivePath('/') ? 'bg-[#14241e] text-emerald-300' : 'text-[#ecfdf5]',
+                )}
+              >
+                Home
+              </Link>
+              <Link
+                to="/shop"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  'rounded-md px-2 py-2 text-sm font-medium uppercase tracking-[0.18em]',
+                  isActivePath('/shop')
+                    ? 'bg-[#14241e] text-emerald-300'
+                    : 'text-[#ecfdf5]',
+                )}
+              >
+                Shop All
+              </Link>
+              <div className="mt-1 border-t border-[#244337] pt-2">
+                <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-[#4b6b5a]">
+                  Collections
+                </p>
+                {categoryItems.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      navigate(`/shop?category=${encodeURIComponent(cat)}`);
+                      setMobileOpen(false);
+                    }}
+                    className="w-full rounded-md px-2 py-1.5 text-left text-sm text-[#a7d7c4] hover:bg-[#14241e]"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
-    </header>
-  )
+      </header>
+      <CartDrawer key={drawerKey} />
+    </>
+  );
 }
 
-export default Header
+export { Header };
+export default Header;

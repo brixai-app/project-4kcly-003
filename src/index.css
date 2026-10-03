@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: #0b1411;
+  --color-bg-rgb: 11, 20, 17;
+  --color-surface: #14241e;
+  --color-surface-rgb: 20, 36, 30;
+  --color-surface-hover: #193028;
+  --color-surface-hover-rgb: 25, 48, 40;
+  --color-border: #244337;
+  --color-border-rgb: 36, 67, 55;
+  --color-text-primary: #ecfdf5;
+  --color-text-primary-rgb: 236, 253, 245;
+  --color-text-muted: #a7d7c4;
+  --color-text-muted-rgb: 167, 215, 196;
+  --color-accent: #10b981;
+  --color-accent-rgb: 16, 185, 129;
+  --color-accent-hover: #0ea371;
+  --color-accent-hover-rgb: 14, 163, 113;
+  --color-accent-text: #000000;
+  --radius-theme: 16px;
+  --font-heading: 'Playfair Display', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+}
+
 @layer base {
   * {
     margin: 0;
@@ -14,39 +37,18 @@
   }
 
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-body);
+    background-color: var(--color-bg);
+    background-image: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(var(--color-accent-rgb), 0.06), transparent 60%);
+    background-attachment: fixed;
+    color: var(--color-text-primary);
     line-height: 1.6;
-    background-color: #ffffff;
-    color: #09090b;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 999px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
-  }
-}
-
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
   }
 }

@@ -1,393 +1,257 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import CartDrawer, { CartItem } from './components/CartDrawer';
-import SearchOverlay from './components/SearchOverlay';
-import WelcomeModal from './components/WelcomeModal';
+import React from 'react';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Toaster } from 'sonner';
+import { CartProvider } from './context/CartContext';
+import Header from './components/Header';
+import CartDrawer from './components/CartDrawer';
 import Home from './pages/Home';
-import Shop from './pages/Shop';
-import ProductDetails from './pages/ProductDetails';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import Orders from './pages/Orders';
-import SignIn from './pages/SignIn';
-import Profile from './pages/Profile';
-import Wishlist from './pages/Wishlist';
-import Checkout from './pages/Checkout';
-import AdminSignIn from './pages/AdminSignIn';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminProducts from './pages/AdminProducts';
-import AdminProductNew from './pages/AdminProductNew';
-import AdminCategories from './pages/AdminCategories';
-import AdminCollections from './pages/AdminCollections';
-import AdminOrders from './pages/AdminOrders';
-import AdminSiteContent from './pages/AdminSiteContent';
+import ShopPage from './pages/ShopPage';
 
-export default function App() {
-  const currentStoreBrand = 'Nishant Waters';
-
-  const [isAdminMode, setIsAdminMode] = useState(false);
-  const [user, setUser] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem('ditris_user_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // Global Dynamic Products State with Brand-Match Guard
-  const [products, setProducts] = useState<any[]>(() => {
-    try {
-      const savedBrand = localStorage.getItem('ditris_brand_owner');
-      const savedProducts = localStorage.getItem('ditris_products');
-      if (savedBrand === currentStoreBrand && savedProducts) {
-        return JSON.parse(savedProducts);
-      }
-      return [{"id":"p1","title":"OCEAN BLUE CUSTOM BOTTLE","displayCategory":"Custom Bottles","price":25,"imageCategory":"accessories","tag":"BESTSELLER","description":"16oz reusable bottle with vibrant ocean blue label.","image":"https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop"},{"id":"p2","title":"SUNSET ORANGE PERSONALIZED BOTTLE","displayCategory":"Custom Bottles","price":28,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Personalized 20oz water bottle with sunset orange design.","image":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop"},{"id":"p3","title":"FOREST GREEN LUXURY BOTTLE","displayCategory":"Custom Bottles","price":30,"imageCategory":"accessories","tag":"BESTSELLER","description":"High-quality 24oz bottle featuring forest green custom wrap.","image":"https://images.unsplash.com/photo-1572635196237-14b3f281503f?q=80&w=800&auto=format&fit=crop"},{"id":"p4","title":"MIDNIGHT BLACK LABEL BOTTLE","displayCategory":"Custom Bottles","price":27,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Sleek 18oz water bottle with confidence-boosting black label.","image":"https://images.unsplash.com/photo-1608256246200-53e635b5b65f?q=80&w=800&auto=format&fit=crop"},{"id":"p5","title":"CRYSTAL CLEAR DESIGN BOTTLE","displayCategory":"Custom Bottles","price":26,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Transparent 22oz bottle perfect for showcasing your custom label.","image":"https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop"},{"id":"p6","title":"VINTAGE GOLD PERSONALIZED BOTTLE","displayCategory":"Custom Bottles","price":32,"imageCategory":"accessories","tag":"BESTSELLER","description":"Elegant 20oz bottle with vintage gold label and sturdy build.","image":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop"}];
-    } catch {
-      return [{"id":"p1","title":"OCEAN BLUE CUSTOM BOTTLE","displayCategory":"Custom Bottles","price":25,"imageCategory":"accessories","tag":"BESTSELLER","description":"16oz reusable bottle with vibrant ocean blue label.","image":"https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop"},{"id":"p2","title":"SUNSET ORANGE PERSONALIZED BOTTLE","displayCategory":"Custom Bottles","price":28,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Personalized 20oz water bottle with sunset orange design.","image":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop"},{"id":"p3","title":"FOREST GREEN LUXURY BOTTLE","displayCategory":"Custom Bottles","price":30,"imageCategory":"accessories","tag":"BESTSELLER","description":"High-quality 24oz bottle featuring forest green custom wrap.","image":"https://images.unsplash.com/photo-1572635196237-14b3f281503f?q=80&w=800&auto=format&fit=crop"},{"id":"p4","title":"MIDNIGHT BLACK LABEL BOTTLE","displayCategory":"Custom Bottles","price":27,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Sleek 18oz water bottle with confidence-boosting black label.","image":"https://images.unsplash.com/photo-1608256246200-53e635b5b65f?q=80&w=800&auto=format&fit=crop"},{"id":"p5","title":"CRYSTAL CLEAR DESIGN BOTTLE","displayCategory":"Custom Bottles","price":26,"imageCategory":"accessories","tag":"NEW ARRIVAL","description":"Transparent 22oz bottle perfect for showcasing your custom label.","image":"https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=800&auto=format&fit=crop"},{"id":"p6","title":"VINTAGE GOLD PERSONALIZED BOTTLE","displayCategory":"Custom Bottles","price":32,"imageCategory":"accessories","tag":"BESTSELLER","description":"Elegant 20oz bottle with vintage gold label and sturdy build.","image":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop"}];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ditris_products', JSON.stringify(products));
-      localStorage.setItem('ditris_brand_owner', currentStoreBrand);
-    } catch {}
-  }, [products]);
-
-  // Global Dynamic Categories State
-  const [categories, setCategories] = useState<any[]>([{"id":"c1","name":"ALL BOTTLES","description":"ALL BOTTLES CATEGORY","status":"VISIBLE"},{"id":"c2","name":"CUSTOMIZE","description":"CUSTOMIZE CATEGORY","status":"VISIBLE"},{"id":"c3","name":"NEW ARRIVALS","description":"NEW ARRIVALS CATEGORY","status":"VISIBLE"},{"id":"c4","name":"BEST SELLERS","description":"BEST SELLERS CATEGORY","status":"VISIBLE"},{"id":"c5","name":"ACCESSORIES","description":"ACCESSORIES CATEGORY","status":"VISIBLE"}]);
-
-  // Global Dynamic Collections State
-  const [collections, setCollections] = useState<any[]>([{"id":"col1","title":"Nishant Waters FLAGSHIP CAPSULE","season":"PERMANENT COLLECTION","bannerImage":"https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?q=80&w=1200&auto=format&fit=crop"},{"id":"col2","title":"Nishant Waters EDITION N° 01","season":"CURRENT SEASON","bannerImage":"https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=1200&auto=format&fit=crop"}]);
-
-  // Global Dynamic Orders State with Brand-Match Guard
-  const [orders, setOrders] = useState<any[]>(() => {
-    try {
-      const savedBrand = localStorage.getItem('ditris_brand_owner');
-      const savedOrders = localStorage.getItem('ditris_orders');
-      if (savedBrand === currentStoreBrand && savedOrders) {
-        return JSON.parse(savedOrders);
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ditris_orders', JSON.stringify(orders));
-    } catch {}
-  }, [orders]);
-
-  // Global Dynamic Site Content & Banners State with Brand-Match Guard
-  const [siteContent, setSiteContent] = useState<any>(() => {
-    try {
-      const savedBrand = localStorage.getItem('ditris_brand_owner');
-      const savedContent = localStorage.getItem('ditris_site_content');
-      if (savedBrand === currentStoreBrand && savedContent) {
-        const parsed = JSON.parse(savedContent);
-        if (parsed?.brandName === currentStoreBrand) {
-          return parsed;
-        }
-      }
-      return {"brandName":"Nishant Waters","banner1":{"title":"Nishant Waters OFFICIAL","subtitle":"CATALOGUE N° 01 / EDITORIAL","image":"https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?q=80&w=1200&auto=format&fit=crop","ctaText":"SHOP NOW"},"banner2":{"title":"NEW ARRIVALS","subtitle":"NEW ARRIVALS / SEASON 24","image":"https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=1200&auto=format&fit=crop","ctaText":"SHOP NOW"},"announcementText":"COMPLIMENTARY WORLDWIDE EXPRESS DELIVERY ON ORDERS OVER $200"};
-    } catch {
-      return {"brandName":"Nishant Waters","banner1":{"title":"Nishant Waters OFFICIAL","subtitle":"CATALOGUE N° 01 / EDITORIAL","image":"https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?q=80&w=1200&auto=format&fit=crop","ctaText":"SHOP NOW"},"banner2":{"title":"NEW ARRIVALS","subtitle":"NEW ARRIVALS / SEASON 24","image":"https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=1200&auto=format&fit=crop","ctaText":"SHOP NOW"},"announcementText":"COMPLIMENTARY WORLDWIDE EXPRESS DELIVERY ON ORDERS OVER $200"};
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ditris_site_content', JSON.stringify(siteContent));
-      localStorage.setItem('ditris_brand_owner', currentStoreBrand);
-    } catch {}
-  }, [siteContent]);
-
-  // Region & Location Preference State
-  const [selectedRegion, setSelectedRegion] = useState({
-    country: 'UNITED STATES',
-    currency: 'USD ($)',
-    code: 'US',
-  });
-
-  // Welcome / Location Detect Modal state (AUTO-TRIGGERS ON LOAD)
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(() => {
-    try {
-      return !sessionStorage.getItem('ditris_region_seen_' + currentStoreBrand);
-    } catch {
-      return true;
-    }
-  });
-
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
-
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const wishlistCount = wishlistItems.length;
-
-  const handleSignIn = (userData: any) => {
-    setUser(userData);
-    try {
-      localStorage.setItem('ditris_user_session', JSON.stringify(userData));
-    } catch {}
-  };
-
-  const handleSignOut = () => {
-    setUser(null);
-    try {
-      localStorage.removeItem('ditris_user_session');
-    } catch {}
-  };
-
-  const handleToggleWishlist = (product: any) => {
-    setWishlistItems(prev => {
-      const exists = prev.some(item => item.id === product.id);
-      if (exists) {
-        return prev.filter(item => item.id !== product.id);
-      }
-      return [...prev, product];
-    });
-  };
-
-  const handleAddToCart = (item: CartItem) => {
-    setCartItems(prev => {
-      const idx = prev.findIndex(i => i.id === item.id && i.size === item.size);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + item.quantity };
-        return next;
-      }
-      return [...prev, item];
-    });
-    setIsCartOpen(true);
-  };
-
-  // Product CRUD Handlers
-  const handleSaveProduct = (productData: any) => {
-    setProducts(prev => {
-      const idx = prev.findIndex(p => p.id === productData.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...productData };
-        return next;
-      }
-      return [productData, ...prev];
-    });
-  };
-
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
-  };
-
-  // Category CRUD Handlers
-  const handleSaveCategory = (categoryData: any) => {
-    setCategories(prev => {
-      const idx = prev.findIndex(c => c.id === categoryData.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...categoryData };
-        return next;
-      }
-      return [...prev, categoryData];
-    });
-  };
-
-  // Collection CRUD Handler
-  const handleCreateCollection = (collectionData: any) => {
-    setCollections(prev => [collectionData, ...prev]);
-  };
-
-  // Order Placement Handler
-  const handlePlaceOrder = (orderPayload: any) => {
-    const newOrder = {
-      id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'PROCESSING',
-      items: cartItems,
-      total: orderPayload.total || cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0),
-      shipping: orderPayload.shipping || {},
-    };
-    setOrders(prev => [newOrder, ...prev]);
-    setCartItems([]); // Clear bag after order
-  };
-
-  const handleUpdateBanner = (key: 'banner1' | 'banner2', updatedData: any) => {
-    setSiteContent((prev: any) => ({
-      ...prev,
-      [key]: { ...prev[key], ...updatedData },
-    }));
-  };
-
-  const handleSelectRegion = (region: { country: string; currency: string; code: string }) => {
-    setSelectedRegion(region);
-    try {
-      sessionStorage.setItem('ditris_region_seen_' + currentStoreBrand, 'true');
-    } catch {}
-  };
-
-  const wishlistIds = wishlistItems.map(i => i.id);
-
+function AboutPage() {
   return (
-    <Router>
-      <div className="min-h-screen bg-white text-zinc-900 flex flex-col font-sans selection:bg-black selection:text-white">
-        <Navbar
-          cartCount={cartCount}
-          wishlistCount={wishlistCount}
-          user={user}
-          isAdminMode={isAdminMode}
-          selectedRegion={selectedRegion}
-          onSignOut={handleSignOut}
-          onOpenCart={() => setIsCartOpen(true)}
-          onOpenSearch={() => setIsSearchOpen(true)}
-          onOpenRegion={() => setIsWelcomeOpen(true)}
-        />
-
-        <main className="flex-1">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <Home
-                  products={products}
-                  siteContent={siteContent}
-                  onToggleWishlist={handleToggleWishlist}
-                  wishlistIds={wishlistIds}
-                  isAdminMode={isAdminMode}
-                  onUpdateBanner={handleUpdateBanner}
-                />
-              }
-            />
-            <Route path="/shop" element={<Shop products={products} categories={categories} />} />
-            <Route path="/shop/:category" element={<Shop products={products} categories={categories} />} />
-            <Route path="/product/:id" element={<ProductDetails products={products} onAddToCart={handleAddToCart} />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/orders" element={<Orders orders={orders} />} />
-            <Route path="/signin" element={<SignIn onSignIn={handleSignIn} />} />
-            <Route path="/profile" element={<Profile user={user} onSignOut={handleSignOut} />} />
-            <Route
-              path="/wishlist"
-              element={
-                <Wishlist
-                  wishlistItems={wishlistItems}
-                  onToggleWishlist={handleToggleWishlist}
-                  onAddToCart={handleAddToCart}
-                />
-              }
-            />
-            <Route
-              path="/checkout"
-              element={
-                <Checkout
-                  cartItems={cartItems}
-                  onPlaceOrder={handlePlaceOrder}
-                />
-              }
-            />
-            <Route path="/admin" element={<AdminSignIn setIsAdminMode={setIsAdminMode} />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard products={products} orders={orders} />} />
-            <Route
-              path="/admin/products"
-              element={
-                <AdminProducts
-                  products={products}
-                  categories={categories}
-                  onDeleteProduct={handleDeleteProduct}
-                />
-              }
-            />
-            <Route
-              path="/admin/products/new"
-              element={
-                <AdminProductNew
-                  products={products}
-                  categories={categories}
-                  onAddProduct={handleSaveProduct}
-                />
-              }
-            />
-            <Route
-              path="/admin/products/:id/edit"
-              element={
-                <AdminProductNew
-                  products={products}
-                  categories={categories}
-                  onEditProduct={handleSaveProduct}
-                />
-              }
-            />
-            <Route
-              path="/admin/categories"
-              element={
-                <AdminCategories
-                  categories={categories}
-                  onSaveCategory={handleSaveCategory}
-                />
-              }
-            />
-            <Route
-              path="/admin/collections"
-              element={
-                <AdminCollections
-                  collections={collections}
-                  onCreateCollection={handleCreateCollection}
-                />
-              }
-            />
-            <Route
-              path="/admin/orders"
-              element={
-                <AdminOrders
-                  orders={orders}
-                  setOrders={setOrders}
-                />
-              }
-            />
-            <Route
-              path="/admin/site-content"
-              element={
-                <AdminSiteContent
-                  siteContent={siteContent}
-                  setSiteContent={setSiteContent}
-                />
-              }
-            />
-          </Routes>
-        </main>
-
-        <Footer isAdminMode={isAdminMode} setIsAdminMode={setIsAdminMode} />
-
-        <CartDrawer
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          cartItems={cartItems}
-          setCartItems={setCartItems}
-        />
-
-        <SearchOverlay
-          isOpen={isSearchOpen}
-          onClose={() => setIsSearchOpen(false)}
-        />
-
-        <WelcomeModal
-          isOpen={isWelcomeOpen}
-          onClose={() => {
-            setIsWelcomeOpen(false);
-            try { sessionStorage.setItem('ditris_region_seen_' + currentStoreBrand, 'true'); } catch {}
-          }}
-          selectedRegion={selectedRegion}
-          onSelectRegion={handleSelectRegion}
-          brandName={siteContent.brandName || 'Nishant Waters'}
-        />
-      </div>
-    </Router>
+    <div className="min-h-[calc(100vh-80px)] bg-[#0b1411] text-[#ecfdf5]">
+      <main className="mx-auto max-w-5xl px-6 py-16 space-y-10">
+        <section className="space-y-4">
+          <h1 className="font-['Playfair_Display'] text-4xl md:text-5xl tracking-tight">
+            About Nishant Waters
+          </h1>
+          <p className="text-[#a7d7c4] max-w-2xl">
+            Nishant Waters crafts eco-forward, custom-labeled water bottles designed
+            for elevated everyday rituals, intentional gifting, and considered events.
+          </p>
+        </section>
+        <section className="grid gap-8 md:grid-cols-3">
+          <div className="rounded-[16px] border border-[#244337] bg-[#14241e] p-6 space-y-2">
+            <h2 className="text-sm tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Materials
+            </h2>
+            <p className="text-sm">
+              Glass, aluminum, and BPA-free formats with recycled and refillable
+              options curated for low-impact hydration.
+            </p>
+          </div>
+          <div className="rounded-[16px] border border-[#244337] bg-[#14241e] p-6 space-y-2">
+            <h2 className="text-sm tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Custom Labels
+            </h2>
+            <p className="text-sm">
+              Minimal typographic labels in sand, slate, forest, mint, ink, or amber
+              palettes tailored to your moment.
+            </p>
+          </div>
+          <div className="rounded-[16px] border border-[#244337] bg-[#14241e] p-6 space-y-2">
+            <h2 className="text-sm tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Considered Shipping
+            </h2>
+            <p className="text-sm">
+              Carbon-conscious logistics with a free-shipping threshold that rewards
+              intentional, consolidated orders.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
+
+function ContactPage() {
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-[#0b1411] text-[#ecfdf5]">
+      <main className="mx-auto max-w-4xl px-6 py-16 space-y-10">
+        <section className="space-y-4">
+          <h1 className="font-['Playfair_Display'] text-4xl md:text-5xl tracking-tight">
+            Contact
+          </h1>
+          <p className="text-[#a7d7c4] max-w-xl">
+            For bespoke orders, event collaborations, or wholesale inquiries, share a
+            few details and our studio will be in touch.
+          </p>
+        </section>
+        <form className="space-y-6 rounded-[16px] border border-[#244337] bg-[#14241e] p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs tracking-[0.3em] uppercase text-[#a7d7c4]">
+                Name
+              </label>
+              <input
+                className="w-full rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="Your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs tracking-[0.3em] uppercase text-[#a7d7c4]">
+                Email
+              </label>
+              <input
+                className="w-full rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="you@example.com"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Message
+            </label>
+            <textarea
+              className="min-h-[140px] w-full rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+              placeholder="Tell us about your project or event..."
+            />
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-md bg-[#10b981] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.25em] text-black transition-colors hover:bg-[#0ea371]"
+          >
+            Send
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+function CheckoutPage() {
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-[#0b1411] text-[#ecfdf5]">
+      <main className="mx-auto max-w-5xl px-6 py-16 space-y-10">
+        <section className="space-y-4">
+          <h1 className="font-['Playfair_Display'] text-4xl md:text-5xl tracking-tight">
+            Checkout
+          </h1>
+          <p className="text-[#a7d7c4] max-w-xl">
+            Enter shipping details and confirm your eco-forward bottle collection.
+          </p>
+        </section>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
+          <div className="space-y-6 rounded-[16px] border border-[#244337] bg-[#14241e] p-6">
+            <h2 className="text-xs tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Shipping
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                className="rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="Full name"
+              />
+              <input
+                className="rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="Phone"
+              />
+            </div>
+            <input
+              className="w-full rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+              placeholder="Address"
+            />
+            <div className="grid gap-4 md:grid-cols-3">
+              <input
+                className="rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="City"
+              />
+              <input
+                className="rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="State"
+              />
+              <input
+                className="rounded-md border border-[#244337] bg-transparent px-3 py-2 text-sm outline-none focus:border-[#10b981]"
+                placeholder="Postal code"
+              />
+            </div>
+          </div>
+          <div className="space-y-4 rounded-[16px] border border-[#244337] bg-[#14241e] p-6">
+            <h2 className="text-xs tracking-[0.3em] uppercase text-[#a7d7c4]">
+              Order Summary
+            </h2>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[#a7d7c4]">Subtotal</span>
+              <span>—</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[#a7d7c4]">Shipping</span>
+              <span>Calculated at next step</span>
+            </div>
+            <div className="border-t border-[#244337] pt-4 mt-2 flex items-center justify-between text-sm">
+              <span className="text-[#a7d7c4]">Total</span>
+              <span>—</span>
+            </div>
+            <button
+              type="button"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-[#10b981] px-5 py-3 text-xs font-semibold uppercase tracking-[0.25em] text-black transition-colors hover:bg-[#0ea371]"
+            >
+              Confirm Order
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ProductPage() {
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-[#0b1411] text-[#ecfdf5] flex items-center justify-center">
+      <p className="text-[#a7d7c4] px-6 py-24">
+        Product detail experience will appear here.
+      </p>
+    </div>
+  );
+}
+
+function PageTransitionWrapper({ children }: { children?: React.ReactNode }) {
+  return (
+    <motion.div
+      className="min-h-[calc(100vh-80px)]"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function AppShell() {
+  const location = useLocation();
+  return (
+    <div className="min-h-screen bg-[#0b1411] text-[#ecfdf5]">
+      <Header className="border-b border-[#244337]" />
+      <AnimatePresence mode="wait">
+        <PageTransitionWrapper key={location?.pathname ?? '/'}>
+          <Routes location={location}>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<ShopPage />} />
+            <Route path="/product/:slug" element={<ProductPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+          </Routes>
+        </PageTransitionWrapper>
+      </AnimatePresence>
+      <CartDrawer />
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <CartProvider>
+      <HashRouter>
+        <AppShell />
+      </HashRouter>
+      <Toaster
+        position="top-right"
+        richColors
+        toastOptions={{
+          style: {
+            background: '#14241e',
+            color: '#ecfdf5',
+            borderRadius: 16,
+            border: '1px solid #244337',
+            fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
+          },
+        }}
+      />
+    </CartProvider>
+  );
+}
+
+export default App;
