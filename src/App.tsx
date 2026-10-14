@@ -1,80 +1,86 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { CartProvider } from './context/CartContext';
-import Header from './components/Header';
-import CartDrawer from './components/CartDrawer';
-import CustomizeDrawer from './components/CustomizeDrawer';
-import Home from './pages/Home';
-import ShopPage from './pages/ShopPage';
-import { Product } from './types';
-
-export function AppShell() {
-  const location = useLocation();
-  const [cartOpen, setCartOpen] = useState(false);
-  const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | undefined>(undefined);
-  const [search, setSearch] = useState('');
-
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setCustomizeOpen(true);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#f4e9dc] text-[#0b1f2a] flex flex-col">
-      <Header onSearchChange={setSearch} />
-      <main className="flex-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.23, 0.92, 0.35, 1] }}
-          >
-            <Routes location={location}>
-              <Route
-                path="/"
-                element={<Home onSelectProduct={handleSelectProduct} />}
-              />
-              <Route
-                path="/shop"
-                element={<ShopPage onSelectProduct={handleSelectProduct} />}
-              />
-            </Routes>
-          </motion.div>
-        </AnimatePresence>
-      </main>
-      <footer className="border-t border-[#e6d8c8] bg-[#fff7ee]">
-        <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-xs tracking-[0.2em] uppercase text-[#4b5a63]">
-            Nishant Waters · Crafted Hydration
-          </span>
-          <span className="text-xs text-[#4b5a63]">
-            © {new Date().getFullYear()} Nishant Waters. All rights reserved.
-          </span>
-        </div>
-      </footer>
-      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
-      <CustomizeDrawer
-        open={customizeOpen}
-        onOpenChange={setCustomizeOpen}
-        product={selectedProduct}
-      />
-      <Toaster position="top-center" />
-    </div>
-  );
-}
+import { CartProvider } from '@/context/CartContext';
+import Header from '@/components/Header';
+import CartDrawer from '@/components/CartDrawer';
+import Home from '@/pages/Home';
+import ShopPage from '@/pages/ShopPage';
+import ProductPage from '@/pages/ProductPage';
+import Checkout from '@/pages/Checkout';
+import OrderConfirmation from '@/pages/OrderConfirmation';
 
 export function App() {
   return (
-    <CartProvider>
-      <HashRouter>
-        <AppShell />
-      </HashRouter>
-    </CartProvider>
+    <HashRouter>
+      <CartProvider>
+        <div className="min-h-screen bg-[#F7F1E8] text-[#141310] flex flex-col">
+          <Header className="border-b border-[#DED5C8] bg-[#F7F1E8]/90 backdrop-blur-sm sticky top-0 z-40" />
+          <CartDrawer />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/shop" element={<ShopPage />} />
+              <Route path="/product/:slug" element={<ProductPage />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
+            </Routes>
+          </main>
+          <footer className="border-t border-[#DED5C8] bg-[#F7F1E8]">
+            <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-10 lg:py-12 grid grid-cols-1 md:grid-cols-4 gap-10 text-sm">
+              <div className="md:col-span-2 space-y-4">
+                <div className="text-xs tracking-[0.35em] uppercase text-[#5D584F]">
+                  Nishant Waters
+                </div>
+                <p className="text-base leading-relaxed text-[#3b3832] max-w-xl">
+                  Custom-labeled waters for ateliers, galleries, and private tables. Crafted with
+                  precision, designed for presence.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold tracking-[0.22em] uppercase text-[#5D584F]">
+                  Atelier
+                </h4>
+                <p className="text-sm text-[#3b3832]">
+                  By-appointment tastings and label consultations in our Mumbai studio. Evenings and
+                  weekends by request.
+                </p>
+                <p className="text-xs text-[#5D584F]">
+                  Studio District, Mumbai<br />
+                  +91 (0)22 0000 0000
+                </p>
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold tracking-[0.22em] uppercase text-[#5D584F]">
+                  Correspondence
+                </h4>
+                <p className="text-sm text-[#3b3832]">
+                  For collaborations, private labels, and events, write to{' '}
+                  <span className="underline decoration-[#0E4A3A]/60 underline-offset-2">
+                    studio@nishantwaters.com
+                  </span>
+                </p>
+                <p className="text-xs text-[#5D584F]">
+                  © {new Date().getFullYear()} Nishant Waters. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </footer>
+        </div>
+        <Toaster
+          position="top-right"
+          richColors
+          toastOptions={{
+            style: {
+              borderRadius: 16,
+              background: '#141310',
+              color: '#F7F1E8',
+              border: '1px solid #3a362e',
+            },
+          }}
+        />
+      </CartProvider>
+    </HashRouter>
   );
 }
 

@@ -1,140 +1,302 @@
-import React, { useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ShoppingBag } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { useCart } from '@/context/CartContext';
+import type { Address, PaymentMethod } from '@/types';
 
-interface CheckoutProps {
-  cartItems?: any[];
-  onPlaceOrder?: (orderData: any) => void;
-}
-
-export default function Checkout({ cartItems = [], onPlaceOrder }: CheckoutProps) {
+export function Checkout() {
+  const { items, totals, placeOrder, clearCart } = useCart();
   const navigate = useNavigate();
-  const [completed, setCompleted] = useState(false);
-  const [shipping, setShipping] = useState({
-    email: '',
+  const [shipping, setShipping] = useState<Address>({
     fullName: '',
-    address: '',
+    line1: '',
+    line2: '',
     city: '',
+    state: '',
     postalCode: '',
+    country: 'India',
+    phone: '',
   });
+  const [method, setMethod] = useState<PaymentMethod>('card');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const handleChange =
+    (field: keyof Address) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setShipping(prev => ({ ...prev, [field]: e.target.value }));
+    };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onPlaceOrder) {
-      onPlaceOrder({
-        total: subtotal,
-        shipping,
-      });
-    }
-    setCompleted(true);
+  const isValid = () => {
+    if (!shipping.fullName.trim()) return false;
+    if (!shipping.line1.trim()) return false;
+    if (!shipping.city.trim()) return false;
+    if (!shipping.state.trim()) return false;
+    if (!shipping.postalCode.trim()) return false;
+    if (!shipping.country.trim()) return false;
+    return items.length > 0;
   };
 
-  if (completed) {
-    return (
-      <div className="min-h-[70vh] bg-white flex items-center justify-center p-6 font-sans">
-        <div className="max-w-md w-full text-center space-y-6 bg-gray-50 border border-gray-200 rounded-2xl p-8 shadow-xs">
-          <CheckCircle2 size={48} className="mx-auto text-emerald-600" />
-          <h1 className="text-2xl font-bold uppercase tracking-tight text-black">ORDER CONFIRMED</h1>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Thank you for your purchase. We have received your order and added it to your order history.
-          </p>
-          <button
-            onClick={() => navigate('/orders')}
-            className="w-full py-3 bg-black text-white text-xs font-semibold uppercase tracking-widest rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-          >
-            VIEW MY ORDERS
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!isValid()) {
+      toast.error('Please complete shipping details and ensure cart is not empty.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payment = {
+        method,
+        last4: method === 'card' ? '4242' : undefined,
+        provider: method !== 'card' ? method.toUpperCase() : 'VISA',
+      };
+      const order = placeOrder({
+        shippingAddress: shipping,
+        billingAddress: shipping,
+        payment,
+        notes: notes.trim() || undefined,
+      });
+      if (!order) {
+        toast.error('Unable to place order. Please try again.');
+        setSaving(false);
+        return;
+      }
+      clearCart();
+      toast.success('Order placed. A confirmation has been generated.');
+      navigate('/order-confirmation');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      toast.error('Something went wrong while placing your order.');
+      setSaving(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: totals.currency ?? 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
 
   return (
-    <div className="bg-white text-zinc-900 min-h-screen font-sans py-12 px-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <h1 className="text-3xl font-black uppercase tracking-tight text-black border-b border-gray-200 pb-4">
-          CHECKOUT & PAYMENT
-        </h1>
-
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4 border border-gray-200 rounded-2xl p-6 bg-gray-50">
-            <h3 className="font-bold text-xs uppercase tracking-wider text-black border-b border-gray-200 pb-3">
-              SHIPPING ADDRESS
-            </h3>
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={shipping.email}
-              onChange={e => setShipping({ ...shipping, email: e.target.value })}
-              className="w-full px-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white outline-none focus:border-black"
-            />
-            <input
-              type="text"
-              placeholder="Full Name"
-              required
-              value={shipping.fullName}
-              onChange={e => setShipping({ ...shipping, fullName: e.target.value })}
-              className="w-full px-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white outline-none focus:border-black"
-            />
-            <input
-              type="text"
-              placeholder="Street Address"
-              required
-              value={shipping.address}
-              onChange={e => setShipping({ ...shipping, address: e.target.value })}
-              className="w-full px-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white outline-none focus:border-black"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                placeholder="City"
-                required
-                value={shipping.city}
-                onChange={e => setShipping({ ...shipping, city: e.target.value })}
-                className="w-full px-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white outline-none focus:border-black"
-              />
-              <input
-                type="text"
-                placeholder="Postal Code"
-                required
-                value={shipping.postalCode}
-                onChange={e => setShipping({ ...shipping, postalCode: e.target.value })}
-                className="w-full px-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white outline-none focus:border-black"
-              />
-            </div>
+    <main className="min-h-screen bg-[#F7F1E8] text-[#141310]">
+      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-20">
+        <section className="grid grid-cols-12 gap-10">
+          <div className="col-span-12 lg:col-span-7 space-y-8">
+            <header className="border-b border-[#DED5C8] pb-4">
+              <p className="text-xs tracking-[0.3em] uppercase text-[#5D584F]">
+                Secure Checkout
+              </p>
+              <h1 className="mt-2 text-4xl md:text-5xl font-light tracking-tight">
+                Delivery details
+              </h1>
+              <p className="mt-2 text-sm text-[#5D584F] max-w-xl">
+                Nishant Waters bottles are packed in recyclable materials and dispatched
+                within 48 hours from our Mumbai atelier.
+              </p>
+            </header>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Full Name
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.fullName}
+                    onChange={() => handleChange('fullName')}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Address Line
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.line1}
+                    onChange={() => handleChange('line1')}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Address Line 2 (optional)
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.line2 ?? ''}
+                    onChange={() => handleChange('line2')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    City
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.city}
+                    onChange={() => handleChange('city')}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    State / Region
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.state}
+                    onChange={() => handleChange('state')}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Postal Code
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.postalCode}
+                    onChange={() => handleChange('postalCode')}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Country
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.country}
+                    onChange={() => handleChange('country')}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                    Phone (for courier updates)
+                  </label>
+                  <input
+                    className="mt-1 w-full rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                    value={shipping.phone ?? ''}
+                    onChange={() => handleChange('phone')}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                  Order Notes
+                </label>
+                <textarea
+                  className="mt-1 w-full min-h-[96px] rounded-[16px] border border-[#DED5C8] bg-[#FFFFFF]/70 px-4 py-3 text-sm outline-none focus:border-[#0E4A3A]"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Ritual timing, gifting note, concierge instructions..."
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#5D584F] mb-3">
+                  Payment
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(['card', 'upi', 'netbanking', 'wallet'] as PaymentMethod[]).map(
+                    option => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setMethod(option)}
+                        className={`rounded-[16px] border px-3 py-2 text-xs uppercase tracking-[0.18em] ${
+                          method === option
+                            ? 'border-[#0E4A3A] bg-[#0E4A3A] text-white'
+                            : 'border-[#DED5C8] bg-white text-[#5D584F]'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    )
+                  )}
+                </div>
+                <p className="mt-2 text-[11px] text-[#5D584F]">
+                  All payments are processed securely. Card details are never stored.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[#DED5C8]">
+                <p className="text-xs text-[#5D584F]">
+                  By placing your order you agree to our terms and atelier lead times.
+                </p>
+                <button
+                  type="submit"
+                  disabled={!isValid() || saving}
+                  className="inline-flex items-center gap-2 rounded-[16px] bg-[#0E4A3A] px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
+                >
+                  {saving ? 'Placing Order...' : 'Place Order'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="space-y-4 border border-gray-200 rounded-2xl p-6 bg-gray-50 flex flex-col justify-between">
-            <div className="space-y-4">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-black border-b border-gray-200 pb-3">
-                BAG SUMMARY ({cartItems.length} ITEMS)
-              </h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {cartItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-black truncate max-w-[180px]">{item.title}</span>
-                    <span className="font-mono text-zinc-600">${item.price} x {item.quantity}</span>
+          <aside className="col-span-12 lg:col-span-5 space-y-6 lg:pl-6">
+            <div className="rounded-[24px] border border-[#DED5C8] bg-white/80 p-6 space-y-4">
+              <h2 className="text-sm font-semibold tracking-[0.2em] uppercase text-[#5D584F]">
+                Order Summary
+              </h2>
+              <div className="max-h-64 overflow-y-auto pr-1 space-y-3">
+                {items.length === 0 && (
+                  <p className="text-sm text-[#5D584F]">
+                    Your cart is empty. Return to the atelier to curate your bottles.
+                  </p>
+                )}
+                {items.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">x{item.quantity}</p>
+                      <p className="text-xs text-[#5D584F]">
+                        {item.personalizationSummary ?? 'Custom-labeled bottle'}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold">
+                      {formatCurrency(item.unitPrice.amount * item.quantity)}
+                    </span>
                   </div>
                 ))}
               </div>
-              <div className="pt-3 border-t border-zinc-200 flex justify-between font-mono font-bold text-sm text-black">
-                <span>TOTAL:</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-[#5D584F]">Subtotal</dt>
+                  <dd>{formatCurrency(totals.subtotal ?? 0)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[#5D584F]">Shipping</dt>
+                  <dd>{formatCurrency(totals.shipping ?? 0)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[#5D584F]">Tax</dt>
+                  <dd>{formatCurrency(totals.tax ?? 0)}</dd>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-[#DED5C8]">
+                  <dt className="text-xs font-semibold tracking-[0.2em] uppercase">
+                    Total
+                  </dt>
+                  <dd className="text-base font-semibold">
+                    {formatCurrency(totals.total ?? 0)}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-[11px] text-[#5D584F]">
+                Complimentary hand-inspected quality control on all Nishant Waters
+                consignments.
+              </p>
             </div>
-
-            <button
-              type="submit"
-              className="w-full py-4 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-colors cursor-pointer mt-6"
-            >
-              PLACE ORDER (${subtotal.toFixed(2)})
-            </button>
-          </div>
-        </form>
+          </aside>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
+
+export default Checkout;

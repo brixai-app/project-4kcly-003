@@ -1,184 +1,221 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useCallback, useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Menu, X, Search, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import CartDrawer from '@/components/CartDrawer';
 
 export interface HeaderProps {
-  onSearchChange?: (value: string) => void;
+  className?: string;
 }
 
-export function Header({ onSearchChange }: HeaderProps) {
-  const location = useLocation();
+export function Header({ className = '' }: HeaderProps) {
   const navigate = useNavigate();
-  const { items } = useCart();
-  const [query, setQuery] = useState('');
-  const [cartOpen, setCartOpen] = useState(false);
+  const { items, openCart } = useCart();
+  const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const itemCount = items?.reduce((sum, item) => sum + (item?.quantity ?? 0), 0) ?? 0;
 
-  const handleSearchChange = (value: string) => {
-    setQuery(value);
-    onSearchChange?.(value);
-  };
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const handleNav = (path: string) => {
-    navigate(path);
-    setMobileOpen(false);
-  };
+  useEffect(() => {
+    if (!mounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const existing = params.get('q') ?? '';
+    setSearch(existing);
+  }, [mounted]);
 
-  const navLinkClasses = (path: string) =>
-    cn(
-      'text-sm font-semibold tracking-[0.18em] uppercase transition-colors',
-      location.pathname === path
-        ? 'text-[#004e89]'
-        : 'text-[#4b5a63] hover:text-[#0b1f2a]'
-    );
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const params = new URLSearchParams(window.location.search);
+      if (search.trim()) {
+        params.set('q', search.trim());
+      } else {
+        params.delete('q');
+      }
+      navigate(`/shop?${params.toString()}`, { replace: false });
+    },
+    [navigate, search]
+  );
+
+  const handleNav = useCallback(
+    (path: string) => {
+      setMobileOpen(false);
+      navigate(path);
+    },
+    [navigate]
+  );
 
   return (
-    <>
-      <header className="sticky top-0 z-40 border-b border-[#e6d8c8]/80 bg-[#f4e9dc]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:py-4 lg:px-0">
+    <header
+      className={cn(
+        'w-full border-b border-[#DED5C8] bg-[#F7F1E8]/90 backdrop-blur-sm sticky top-0 z-40',
+        className
+      )}
+    >
+      <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-3 lg:py-4 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(v => !v)}
+          className="lg:hidden inline-flex items-center justify-center rounded-md border border-[#DED5C8] px-2.5 py-2 text-[#141310]"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleNav('/')}
+          className="flex items-center gap-3"
+        >
+          <div className="h-9 w-9 rounded-full border border-[#0E4A3A] flex items-center justify-center bg-white">
+            <span className="text-xs font-semibold tracking-[0.25em] text-[#0E4A3A]">
+              NW
+            </span>
+          </div>
+          <div className="flex flex-col leading-tight text-left">
+            <span className="font-[500] tracking-[0.35em] text-[11px] uppercase text-[#5D584F]">
+              Nishant Waters
+            </span>
+            <span className="text-[11px] text-[#5D584F]">
+              Custom Labeled Bottled Water Atelier
+            </span>
+          </div>
+        </button>
+
+        <nav className="hidden lg:flex ml-10 gap-8 text-sm font-medium text-[#5D584F]">
           <button
             type="button"
             onClick={() => handleNav('/')}
-            className="flex items-center gap-3"
+            className="hover:text-[#141310] transition-colors tracking-[0.18em] uppercase"
           >
-            <motion.div
-              whileHover={{ rotate: -6, scale: 1.02 }}
-              whileTap={{ scale: 0.96 }}
-              className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-[#e6d8c8] bg-[#fff7ee] shadow-sm"
-            >
-              <span className="text-xs font-semibold tracking-[0.2em] text-[#004e89]">
-                NW
-              </span>
-            </motion.div>
-            <div className="hidden flex-col md:flex">
-              <span className="font-[Sora] text-xs font-semibold tracking-[0.28em] text-[#4b5a63]">
-                NISHANT WATERS
-              </span>
-              <span className="text-[11px] font-light uppercase tracking-[0.24em] text-[#0b1f2a]">
-                Custom-labeled Still & Sparkling
-              </span>
-            </div>
+            Home
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/shop')}
+            className="hover:text-[#141310] transition-colors tracking-[0.18em] uppercase"
+          >
+            Shop
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/about')}
+            className="hover:text-[#141310] transition-colors tracking-[0.18em] uppercase"
+          >
+            About
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNav('/contact')}
+            className="hover:text-[#141310] transition-colors tracking-[0.18em] uppercase"
+          >
+            Contact
+          </button>
+        </nav>
+
+        <div className="flex-1 flex items-center justify-end gap-3 lg:gap-4">
+          <form
+            onSubmit={handleSubmit}
+            className="hidden md:flex items-center gap-2 px-3 py-2 rounded-full border border-[#DED5C8] bg-white min-w-[220px] max-w-sm w-full"
+          >
+            <Search className="w-4 h-4 text-[#5D584F]" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search still, sparkling, infused..."
+              className="flex-1 bg-transparent text-sm text-[#141310] placeholder:text-[#B2A89A] focus:outline-none"
+            />
+          </form>
+
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative inline-flex items-center justify-center rounded-full border border-[#DED5C8] bg-white px-3 py-2 text-[#141310] hover:bg-[#F0E7DA] transition-colors"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {itemCount > 0 && (
+              <span className="ml-1 text-xs font-semibold">{itemCount}</span>
+            )}
           </button>
 
-          <nav className="hidden items-center gap-8 md:flex">
-            <Link to="/" className={navLinkClasses('/')}>
-              Home
-            </Link>
-            <Link to="/shop" className={navLinkClasses('/shop')}>
-              Shop
-            </Link>
-            <button
-              type="button"
-              onClick={() => handleNav('/about')}
-              className={navLinkClasses('/about')}
-            >
-              About
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav('/contact')}
-              className={navLinkClasses('/contact')}
-            >
-              Contact
-            </button>
-          </nav>
+          <CartDrawer triggerClassName="hidden" />
+        </div>
+      </div>
 
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="hidden items-center rounded-[18px] border border-[#e6d8c8] bg-[#fff7ee] px-3 py-1.5 md:flex">
-              <Search className="mr-2 h-4 w-4 text-[#4b5a63]" />
+      {mobileOpen && (
+        <div className="lg:hidden border-t border-[#DED5C8] bg-[#F7F1E8]">
+          <div className="px-6 pt-3 pb-4 space-y-3">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 px-3 py-2 rounded-full border border-[#DED5C8] bg-white w-full"
+            >
+              <Search className="w-4 h-4 text-[#5D584F]" />
               <input
-                value={query}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search bottles, labels..."
-                className="w-40 bg-transparent text-xs font-medium text-[#0b1f2a] placeholder:text-[#4b5a63]/70 focus:outline-none"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search collection..."
+                className="flex-1 bg-transparent text-sm text-[#141310] placeholder:text-[#B2A89A] focus:outline-none"
               />
+            </form>
+            <div className="flex flex-col gap-2 text-sm font-medium text-[#5D584F]">
+              <NavLink
+                to="/"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'py-2 tracking-[0.2em] uppercase',
+                    isActive && 'text-[#141310]'
+                  )
+                }
+              >
+                Home
+              </NavLink>
+              <NavLink
+                to="/shop"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'py-2 tracking-[0.2em] uppercase',
+                    isActive && 'text-[#141310]'
+                  )
+                }
+              >
+                Shop
+              </NavLink>
+              <NavLink
+                to="/about"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'py-2 tracking-[0.2em] uppercase',
+                    isActive && 'text-[#141310]'
+                  )
+                }
+              >
+                About
+              </NavLink>
+              <NavLink
+                to="/contact"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'py-2 tracking-[0.2em] uppercase',
+                    isActive && 'text-[#141310]'
+                  )
+                }
+              >
+                Contact
+              </NavLink>
             </div>
-
-            <motion.button
-              type="button"
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.96, y: 0 }}
-              onClick={() => setCartOpen(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-[18px] border border-[#e6d8c8] bg-[#fff7ee] text-[#0b1f2a]"
-            >
-              <ShoppingBag className="h-5 w-5" />
-              {itemCount > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-md bg-[#004e89] px-1 text-[10px] font-semibold text-white">
-                  {itemCount}
-                </span>
-              )}
-            </motion.button>
-
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-[14px] border border-[#e6d8c8] bg-[#fff7ee] text-[#0b1f2a] md:hidden"
-              onClick={() => setMobileOpen((prev) => !prev)}
-            >
-              {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
           </div>
         </div>
-
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="border-t border-[#e6d8c8] bg-[#fff7ee] md:hidden"
-            >
-              <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3">
-                <div className="flex items-center rounded-[16px] border border-[#e6d8c8] bg-[#f4e9dc]/70 px-3 py-1.5">
-                  <Search className="mr-2 h-4 w-4 text-[#4b5a63]" />
-                  <input
-                    value={query}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    placeholder="Search bottles, labels..."
-                    className="w-full bg-transparent text-xs font-medium text-[#0b1f2a] placeholder:text-[#4b5a63]/70 focus:outline-none"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/')}
-                  className={cn('text-left', navLinkClasses('/'))}
-                >
-                  Home
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/shop')}
-                  className={cn('text-left', navLinkClasses('/shop'))}
-                >
-                  Shop
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/about')}
-                  className={cn('text-left', navLinkClasses('/about'))}
-                >
-                  About
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNav('/contact')}
-                  className={cn('text-left', navLinkClasses('/contact'))}
-                >
-                  Contact
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
-
-      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
-    </>
+      )}
+    </header>
   );
 }
 
