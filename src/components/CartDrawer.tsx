@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,236 +8,255 @@ import { useCart } from '@/context/CartContext';
 import { cn } from '@/lib/utils';
 
 export interface CartDrawerProps {
-  triggerClassName?: string;
+  className?: string;
 }
 
-function formatCurrency(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `₹${amount.toFixed(0)}`;
-  }
-}
-
-export function CartDrawer({ triggerClassName = '' }: CartDrawerProps) {
+export function CartDrawer({ className = '' }: CartDrawerProps) {
   const {
-    items,
-    totals,
-    isCartOpen,
-    openCart,
-    closeCart,
-    updateQty,
+    state,
+    isDrawerOpen,
+    closeDrawer,
+    subtotal,
+    shipping,
+    tax,
+    grandTotal,
+    itemCount,
+    progressPercent,
     removeItem,
+    updateQuantity,
+    getCartItemProduct,
+    setStatus,
   } = useCart();
   const navigate = useNavigate();
 
-  const itemCount = items?.reduce((sum, item) => sum + (item?.quantity ?? 0), 0) ?? 0;
-  const currency = totals?.currency ?? 'INR';
-  const subtotal = totals?.subtotal ?? 0;
-  const shippingThreshold = 5000;
-  const progress = Math.min(1, subtotal / shippingThreshold);
-  const remaining = Math.max(0, shippingThreshold - subtotal);
-
   const handleCheckout = () => {
-    if (!items?.length) {
-      toast.error('Your cart is empty');
+    if (!itemCount) {
+      toast.info('Your cart is empty. Add a bottle to continue.');
       return;
     }
-    closeCart();
+    setStatus('checking_out');
+    toast.success('Cart locked in. Guiding you to the atelier checkout.', {
+      description: 'A dedicated concierge flow will live at /checkout.',
+    });
     navigate('/checkout');
+    closeDrawer();
   };
 
-  const handleIncrease = (id: string, current: number) => {
-    updateQty(id, current + 1);
-  };
-
-  const handleDecrease = (id: string, current: number) => {
-    if (current <= 1) {
+  const handleQuantityChange = (id: string, quantity: number) => {
+    if (quantity < 1) {
       removeItem(id);
-      toast.success('Item removed from cart');
-    } else {
-      updateQty(id, current - 1);
+      toast('Removed from cart', { description: 'The line item was cleared.' });
+      return;
     }
+    updateQuantity(id, quantity);
   };
+
+  const progressLabel =
+    progressPercent >= 100
+      ? 'Complimentary shipping unlocked'
+      : `Shipping progress: ${progressPercent.toFixed(0)}%`;
 
   return (
-    <Dialog.Root open={isCartOpen} onOpenChange={(open) => (open ? openCart() : closeCart())}>
-      <Dialog.Trigger asChild>
-        <button
-          type="button"
-          onClick={openCart}
-          className={cn(
-            'relative inline-flex items-center gap-2 rounded-md border border-[#DED5C8] bg-white px-3 py-2 text-sm font-medium text-[#141310] hover:bg-[#F7F1E8]/80 transition-colors',
-            triggerClassName
-          )}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          <span className="uppercase tracking-[0.18em] text-xs">Cart</span>
-          {itemCount > 0 && (
-            <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#0E4A3A] px-1 text-xs font-semibold text-white">
-              {itemCount}
-            </span>
-          )}
-        </button>
-      </Dialog.Trigger>
-
+    <Dialog.Root open={isDrawerOpen} onOpenChange={(open) => (!open ? closeDrawer() : undefined)}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" />
         <AnimatePresence>
-          {isCartOpen && (
-            <Dialog.Content asChild forceMount>
-              <motion.aside
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'tween', duration: 0.32 }}
-                className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-[#F7F1E8] shadow-2xl"
-              >
-                <header className="flex items-center justify-between border-b border-[#DED5C8] px-6 py-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[#5D584F]">
-                      Nishant Waters
-                    </p>
-                    <h2 className="font-serif text-xl text-[#141310]">Cart Atelier</h2>
-                  </div>
-                  <Dialog.Close asChild>
+          {isDrawerOpen && (
+            <>
+              <Dialog.Overlay asChild>
+                <motion.div
+                  className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                />
+              </Dialog.Overlay>
+              <Dialog.Content asChild>
+                <motion.aside
+                  className={cn(
+                    'fixed right-0 top-0 h-full w-full max-w-md z-50 bg-[#F9F6F2] shadow-xl border-l border-[#E7E1D8] flex flex-col',
+                    className
+                  )}
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'tween', duration: 0.32 }}
+                >
+                  <header className="px-6 pt-6 pb-4 border-b border-[#E7E1D8] flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-[#5F5A55]">
+                        Cart
+                      </p>
+                      <Dialog.Title className="font-[Playfair_Display] text-2xl tracking-tight text-[#1F1F1F]">
+                        Nishant Waters
+                      </Dialog.Title>
+                      <p className="text-xs text-[#5F5A55] mt-1">
+                        {itemCount ? `${itemCount} item${itemCount > 1 ? 's' : ''} curated` : 'Your curation is waiting.'}
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#DED5C8] bg-white text-[#5D584F] hover:bg-[#E6DDD0] transition-colors"
+                      onClick={closeDrawer}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E7E1D8] bg-white text-[#1F1F1F] hover:bg-[#F3ECE2] transition-colors"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                  </Dialog.Close>
-                </header>
+                  </header>
 
-                <div className="border-b border-[#DED5C8] px-6 py-3">
-                  <div className="flex items-center justify-between text-xs text-[#5D584F]">
-                    <span className="uppercase tracking-[0.18em]">Subtotal</span>
-                    <span className="font-semibold text-[#141310]">
-                      {formatCurrency(subtotal, currency)}
-                    </span>
-                  </div>
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#DED5C8]/60">
-                    <div
-                      className="h-full rounded-full bg-[#0E4A3A]"
-                      style={{ width: `${progress * 100}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-[#5D584F]">
-                    {progress >= 1
-                      ? 'Complimentary shipping unlocked for this order.'
-                      : `Add ${formatCurrency(remaining, currency)} to unlock complimentary shipping.`}
-                  </p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                  {items?.length ? (
-                    items.map((item) => (
-                      <div
-                        key={item?.id}
-                        className="flex gap-3 rounded-2xl border border-[#DED5C8] bg-white p-3"
-                      >
-                        <div className="relative h-20 w-16 overflow-hidden rounded-xl bg-[#F7F1E8]">
-                          <div className="absolute inset-1 rounded-lg border border-[#DED5C8]/60" />
-                          <div className="absolute inset-y-2 left-5 w-3 rounded-full bg-gradient-to-b from-[#D4E4DD] via-white to-[#C5D7CF]" />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-serif text-sm text-[#141310] leading-snug">
-                                {item?.personalizationSummary ?? 'Custom-labeled bottle'}
-                              </p>
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#5D584F] mt-0.5">
-                                Qty · {item?.quantity ?? 0}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                removeItem(item?.id ?? '');
-                                toast.success('Item removed from cart');
-                              }}
-                              className="text-[#5D584F]/60 hover:text-[#141310]"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-sm font-semibold text-[#141310]">
-                            {formatCurrency(
-                              (item?.unitPrice?.amount ?? 0) * (item?.quantity ?? 0),
-                              item?.unitPrice?.currency ?? currency
-                            )}
-                          </p>
-                          <div className="flex items-center justify-between pt-1">
-                            <div className="inline-flex items-center rounded-full border border-[#DED5C8] bg-[#F7F1E8] px-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDecrease(item?.id ?? '', item?.quantity ?? 0)}
-                                className="inline-flex h-6 w-6 items-center justify-center text-xs text-[#141310]"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </button>
-                              <span className="min-w-[2rem] text-center text-xs font-medium text-[#141310]">
-                                {item?.quantity ?? 0}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleIncrease(item?.id ?? '', item?.quantity ?? 0)}
-                                className="inline-flex h-6 w-6 items-center justify-center text-xs text-[#141310]"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </div>
-                            {item?.labelDesignId && (
-                              <span className="rounded-full border border-[#DED5C8] bg-white px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#5D584F]">
-                                Custom Label
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center text-center">
-                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-[#DED5C8]">
-                        <ShoppingBag className="h-5 w-5 text-[#5D584F]" />
-                      </div>
-                      <p className="font-serif text-lg text-[#141310]">The cart is quietly empty.</p>
-                      <p className="mt-1 text-sm text-[#5D584F] max-w-xs">
-                        Begin with a single bottle and build your own water story.
-                      </p>
+                  <div className="px-6 pt-4 pb-5 border-b border-[#E7E1D8]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold tracking-[0.2em] uppercase text-[#5F5A55]">
+                        Shipping Threshold
+                      </span>
+                      <span className="text-xs text-[#1F1F1F]">{progressLabel}</span>
                     </div>
-                  )}
-                </div>
-
-                <footer className="border-t border-[#DED5C8] bg-[#F7F1E8] px-6 py-4 space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#5D584F]">Subtotal</span>
-                    <span className="font-semibold text-[#141310]">
-                      {formatCurrency(subtotal, currency)}
-                    </span>
+                    <div className="h-1.5 w-full rounded-full bg-[#E7E1D8] overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full rounded-full bg-[#0B3D91] transition-all',
+                          progressPercent >= 100 && 'bg-[#1F1F1F]'
+                        )}
+                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[11px] text-[#5F5A55]">
+                      Orders above ₹5,000 travel with complimentary curated shipping.
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleCheckout}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#0E4A3A] px-4 py-3 text-sm font-medium text-white hover:bg-[#0B3E31] transition-colors"
-                  >
-                    <span className="uppercase tracking-[0.2em] text-[11px]">
-                      Proceed to checkout
-                    </span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                  <p className="text-[11px] text-[#5D584F]">
-                    Duties & taxes calculated at checkout. Complimentary water atelier support for
-                    every order.
-                  </p>
-                </footer>
-              </motion.aside>
-            </Dialog.Content>
+
+                  <section className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                    {state.items.length === 0 && (
+                      <div className="h-full flex flex-col items-center justify-center text-center gap-3">
+                        <div className="h-16 w-16 rounded-full border border-dashed border-[#E7E1D8] flex items-center justify-center">
+                          <ShoppingBag className="h-7 w-7 text-[#5F5A55]" />
+                        </div>
+                        <p className="font-[Playfair_Display] text-lg text-[#1F1F1F]">
+                          The cart is a blank canvas.
+                        </p>
+                        <p className="text-sm text-[#5F5A55] max-w-xs">
+                          Begin with a single bottle—still, sparkling, or infused—and we will shape the rest.
+                        </p>
+                      </div>
+                    )}
+
+                    {state.items.map((item) => {
+                      const product = getCartItemProduct(item);
+                      if (!product) return null;
+                      const image = product.images?.[0];
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex gap-3 border border-[#E7E1D8] rounded-2xl bg-white p-3"
+                        >
+                          <div className="relative h-24 w-20 overflow-hidden rounded-xl bg-[#F3ECE2]">
+                            {image?.url && (
+                              <img
+                                src={image.url}
+                                alt={image.alt ?? product.name}
+                                crossOrigin="anonymous"
+                                className="h-full w-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="flex-1 flex flex-col justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-[#1F1F1F]">
+                                {product.name}
+                              </p>
+                              <p className="text-xs text-[#5F5A55] mt-0.5">
+                                {product.category} · {item.quantity} x
+                              </p>
+                              {item.customLabel?.name && (
+                                <p className="text-[11px] text-[#5F5A55] mt-1">
+                                  Label: {item.customLabel.name}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="inline-flex items-center rounded-full border border-[#E7E1D8] bg-[#F9F6F2]">
+                                <button
+                                  type="button"
+                                  className="h-7 w-7 flex items-center justify-center text-xs text-[#1F1F1F]"
+                                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </button>
+                                <span className="px-2 text-xs text-[#1F1F1F]">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="h-7 w-7 flex items-center justify-center text-xs text-[#1F1F1F]"
+                                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold text-[#1F1F1F]">
+                                  ₹{item.lineTotal.toLocaleString('en-IN')}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuantityChange(item.id, 0)}
+                                  className="h-7 w-7 flex items-center justify-center rounded-full border border-[#E7E1D8] text-[#5F5A55] hover:bg-[#F3ECE2] transition-colors"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+
+                  <footer className="border-t border-[#E7E1D8] px-6 py-4 space-y-3 bg-[#F9F6F2]">
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[#5F5A55]">Merchandise</span>
+                        <span className="text-[#1F1F1F]">
+                          ₹{subtotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#5F5A55]">Shipping</span>
+                        <span className="text-[#1F1F1F]">
+                          {shipping === 0 ? 'Complimentary' : `₹${shipping.toLocaleString('en-IN')}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#5F5A55]">Tax</span>
+                        <span className="text-[#1F1F1F]">
+                          ₹{tax.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-dashed border-[#E7E1D8] mt-1">
+                        <span className="text-xs uppercase tracking-[0.2em] text-[#5F5A55]">
+                          Estimated Total
+                        </span>
+                        <span className="font-semibold text-[#1F1F1F]">
+                          ₹{grandTotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCheckout}
+                      className={cn(
+                        'w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B3D91] text-white text-sm font-semibold tracking-[0.16em] uppercase py-3',
+                        'hover:bg-[#072E6D] transition-colors'
+                      )}
+                    >
+                      Proceed to Checkout
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                    <p className="text-[11px] text-[#5F5A55] text-center">
+                      No payment is processed in this demo. The flow at /checkout is a placeholder for your atelier.
+                    </p>
+                  </footer>
+                </motion.aside>
+              </Dialog.Content>
+            </>
           )}
         </AnimatePresence>
       </Dialog.Portal>

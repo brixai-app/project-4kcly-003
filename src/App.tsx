@@ -6,81 +6,92 @@ import Header from '@/components/Header';
 import CartDrawer from '@/components/CartDrawer';
 import Home from '@/pages/Home';
 import ShopPage from '@/pages/ShopPage';
-import ProductPage from '@/pages/ProductPage';
-import Checkout from '@/pages/Checkout';
-import OrderConfirmation from '@/pages/OrderConfirmation';
 
-export function App() {
+export interface LayoutProps {
+  children?: React.ReactNode;
+}
+
+export function Layout({ children = null }: LayoutProps) {
   return (
-    <HashRouter>
-      <CartProvider>
-        <div className="min-h-screen bg-[#F7F1E8] text-[#141310] flex flex-col">
-          <Header className="border-b border-[#DED5C8] bg-[#F7F1E8]/90 backdrop-blur-sm sticky top-0 z-40" />
-          <CartDrawer />
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<ShopPage />} />
-              <Route path="/product/:slug" element={<ProductPage />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-            </Routes>
-          </main>
-          <footer className="border-t border-[#DED5C8] bg-[#F7F1E8]">
-            <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-10 lg:py-12 grid grid-cols-1 md:grid-cols-4 gap-10 text-sm">
-              <div className="md:col-span-2 space-y-4">
-                <div className="text-xs tracking-[0.35em] uppercase text-[#5D584F]">
-                  Nishant Waters
-                </div>
-                <p className="text-base leading-relaxed text-[#3b3832] max-w-xl">
-                  Custom-labeled waters for ateliers, galleries, and private tables. Crafted with
-                  precision, designed for presence.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold tracking-[0.22em] uppercase text-[#5D584F]">
-                  Atelier
-                </h4>
-                <p className="text-sm text-[#3b3832]">
-                  By-appointment tastings and label consultations in our Mumbai studio. Evenings and
-                  weekends by request.
-                </p>
-                <p className="text-xs text-[#5D584F]">
-                  Studio District, Mumbai<br />
-                  +91 (0)22 0000 0000
-                </p>
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold tracking-[0.22em] uppercase text-[#5D584F]">
-                  Correspondence
-                </h4>
-                <p className="text-sm text-[#3b3832]">
-                  For collaborations, private labels, and events, write to{' '}
-                  <span className="underline decoration-[#0E4A3A]/60 underline-offset-2">
-                    studio@nishantwaters.com
-                  </span>
-                </p>
-                <p className="text-xs text-[#5D584F]">
-                  © {new Date().getFullYear()} Nishant Waters. All rights reserved.
-                </p>
-              </div>
+    <div className="min-h-screen bg-[#F9F6F2] text-[#1F1F1F] flex flex-col">
+      <Header className="border-b border-[#E7E1D8]" />
+      <main className="flex-1 w-full">
+        {children}
+      </main>
+      <footer className="w-full border-t border-[#E7E1D8] bg-white">
+        <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-10 lg:py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
+          <div className="md:col-span-2 space-y-3">
+            <div className="text-xs tracking-[0.2em] uppercase text-[#5F5A55]">
+              Nishant Waters
             </div>
-          </footer>
+            <p className="font-serif text-base text-[#1F1F1F]">
+              Curated custom-labeled water for interiors, tablescapes, and rituals that demand quiet precision.
+            </p>
+            <p className="text-xs text-[#5F5A55]">
+              © {new Date().getFullYear()} Nishant Waters. All rights reserved.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold tracking-[0.18em] uppercase text-[#5F5A55]">
+              Studio
+            </h4>
+            <p className="text-sm text-[#1F1F1F]">
+              By appointment only<br />
+              Mumbai / Goa
+            </p>
+            <p className="text-xs text-[#5F5A55]">
+              Bespoke hospitality and gifting programs on request.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold tracking-[0.18em] uppercase text-[#5F5A55]">
+              Contact
+            </h4>
+            <p className="text-sm text-[#1F1F1F]">
+              concierge@nishantwaters.com
+            </p>
+            <p className="text-xs text-[#5F5A55]">
+              Mon–Sat, 10:00–19:00 IST
+            </p>
+          </div>
         </div>
-        <Toaster
-          position="top-right"
-          richColors
-          toastOptions={{
-            style: {
-              borderRadius: 16,
-              background: '#141310',
-              color: '#F7F1E8',
-              border: '1px solid #3a362e',
-            },
-          }}
-        />
-      </CartProvider>
-    </HashRouter>
+      </footer>
+      <CartDrawer />
+    </div>
+  );
+}
+
+export interface AppProps {
+  initialRoute?: string;
+}
+
+export function App({ initialRoute }: AppProps) {
+  const RouterComponent = HashRouter;
+
+  return (
+    <CartProvider>
+      <RouterComponent>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<ShopPage />} />
+          </Routes>
+        </Layout>
+      </RouterComponent>
+      <Toaster
+        position="top-right"
+        richColors
+        toastOptions={{
+          style: {
+            borderRadius: 16,
+            background: '#FFFFFF',
+            border: '1px solid #E7E1D8',
+            color: '#1F1F1F',
+            fontFamily: 'Lora, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+          },
+        }}
+      />
+    </CartProvider>
   );
 }
 

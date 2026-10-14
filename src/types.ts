@@ -1,181 +1,109 @@
-export type ProductCategory =
-  | 'still'
-  | 'sparkling'
-  | 'infused'
-  | 'limited'
-  | 'magnum'
-  | 'mini';
-
-export type VolumeMl = 250 | 330 | 500 | 750 | 1000;
-
-export type BottleFinish = 'matte' | 'gloss' | 'frosted' | 'metallic';
-
-export type LabelShape = 'rect' | 'arch' | 'circle' | 'pill';
-
-export type LabelFoil = 'none' | 'gold' | 'rose-gold' | 'silver' | 'black';
-
-export type TypographyCase = 'title' | 'upper' | 'lower' | 'caps';
-
-export type Alignment = 'left' | 'center' | 'right';
-
-export type BadgeTone = 'ivory' | 'taupe' | 'charcoal' | 'emerald';
+export type ID = string;
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR';
 
-export interface Price {
-  amount: number;
-  currency: CurrencyCode;
-  compareAtAmount?: number | null;
+export type ProductCategory =
+  | 'Still'
+  | 'Sparkling'
+  | 'Mineral'
+  | 'Infused'
+  | 'Limited'
+  | 'Gift';
+
+export type BottleFinish = 'Matte' | 'Gloss' | 'Frosted';
+
+export type BottleSizeMl = 250 | 500 | 750 | 1000;
+
+export type HydrationProfile = 'Light' | 'Balanced' | 'Mineral-Rich';
+
+export interface CustomLabelFont {
+  id: ID;
+  name: string;
+  family: string;
+  isSerif: boolean;
+}
+
+export interface CustomLabelPalette {
+  id: ID;
+  name: string;
+  primaryHex: string;
+  secondaryHex?: string;
+  accentHex?: string;
+}
+
+export interface CustomLabel {
+  id: ID;
+  name: string;
+  headline: string;
+  subline?: string;
+  font: CustomLabelFont;
+  palette: CustomLabelPalette;
+  notes?: string;
 }
 
 export interface ProductImage {
-  id: string;
   url: string;
-  alt?: string;
+  alt: string;
   priority?: boolean;
 }
 
 export interface ProductVariant {
-  id: string;
-  volumeMl: VolumeMl;
+  id: ID;
+  sizeMl: BottleSizeMl;
   finish: BottleFinish;
   stock: number;
-  sku: string;
-  price: Price;
-  isDefault?: boolean;
+  price: number;
+  compareAtPrice?: number;
 }
 
 export interface ProductMeta {
-  collection?: string;
-  tastingNotes?: string[];
-  sourceRegion?: string;
-  phLevel?: number;
-  mineralProfile?: string;
-  badges?: string[];
-  isNew?: boolean;
-  isLimited?: boolean;
+  hydrationProfile: HydrationProfile;
+  tdsPpm?: number;
+  ph?: number;
+  originRegion?: string;
 }
 
 export interface Product {
-  id: string;
+  id: ID;
   slug: string;
   name: string;
-  shortDescription: string;
-  description: string;
+  tagline?: string;
   category: ProductCategory;
-  heroImage: ProductImage;
+  description: string;
   images: ProductImage[];
   variants: ProductVariant[];
-  tags: string[];
+  defaultVariantId: ID;
   meta?: ProductMeta;
-  sortIndex?: number;
-}
-
-export type LabelElementType = 'text' | 'monogram' | 'badge' | 'date' | 'icon';
-
-export interface LabelBaseElement {
-  id: string;
-  type: LabelElementType;
-  x: number;
-  y: number;
-  rotation?: number;
-  locked?: boolean;
-}
-
-export interface LabelTextElement extends LabelBaseElement {
-  type: 'text' | 'monogram';
-  text: string;
-  fontFamily: string;
-  fontWeight: number;
-  fontSize: number;
-  letterSpacing: number;
-  lineHeight: number;
-  color: string;
-  case: TypographyCase;
-  align: Alignment;
-}
-
-export interface LabelBadgeElement extends LabelBaseElement {
-  type: 'badge';
-  text: string;
-  tone: BadgeTone;
-  outline: boolean;
-  radius: number;
-}
-
-export interface LabelDateElement extends LabelBaseElement {
-  type: 'date';
-  format: string;
-  color: string;
-  fontFamily: string;
-  fontSize: number;
-}
-
-export interface LabelIconElement extends LabelBaseElement {
-  type: 'icon';
-  iconKey: string;
-  size: number;
-  color: string;
-}
-
-export type LabelElement =
-  | LabelTextElement
-  | LabelBadgeElement
-  | LabelDateElement
-  | LabelIconElement;
-
-export interface LabelPalette {
-  background: string;
-  primary: string;
-  secondary: string;
-  accent: string;
-  foil: LabelFoil;
-}
-
-export interface LabelDimensions {
-  width: number;
-  height: number;
-  cornerRadius: number;
-  shape: LabelShape;
-}
-
-export interface CustomLabelDesign {
-  id: string;
-  name: string;
-  slug?: string;
-  createdAt: string;
-  updatedAt: string;
-  palette: LabelPalette;
-  dimensions: LabelDimensions;
-  elements: LabelElement[];
-  thumbnailUrl?: string;
-  notes?: string;
-  isFavorite?: boolean;
+  isFeatured?: boolean;
+  isLimited?: boolean;
 }
 
 export interface CartItem {
-  id: string;
-  productId: string;
-  variantId: string;
+  id: ID;
+  productId: ID;
+  variantId: ID;
   quantity: number;
-  unitPrice: Price;
-  labelDesignId?: string;
-  personalizationSummary?: string;
+  unitPrice: number;
+  customLabel?: CustomLabel;
+  lineTotal: number;
 }
 
-export interface CartTotals {
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  currency: CurrencyCode;
+export type CartStatus = 'idle' | 'checking_out' | 'submitted';
+
+export interface ShippingInfo {
+  fullName: string;
+  email: string;
+  phone?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  region?: string;
+  postalCode: string;
+  country: string;
+  deliveryNotes?: string;
 }
 
-export interface CartState {
-  items: CartItem[];
-  savedDesigns: CustomLabelDesign[];
-  totals: CartTotals;
-}
+export type PaymentMethod = 'card' | 'upi' | 'netbanking' | 'cod';
 
 export type OrderStatus =
   | 'pending'
@@ -184,72 +112,99 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export interface Address {
-  fullName: string;
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  phone?: string;
-}
-
-export type PaymentMethod = 'card' | 'upi' | 'netbanking' | 'wallet';
-
-export interface PaymentSummary {
-  method: PaymentMethod;
-  last4?: string;
-  provider?: string;
-}
-
-export interface OrderLineItem {
-  id: string;
-  productId: string;
-  variantId: string;
-  quantity: number;
-  unitPrice: Price;
-  labelDesignSnapshot?: CustomLabelDesign;
+export interface OrderTotals {
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  discount?: number;
+  currency: CurrencyCode;
+  grandTotal: number;
 }
 
 export interface Order {
-  id: string;
-  number: string;
+  id: ID;
   createdAt: string;
+  items: CartItem[];
+  shippingInfo: ShippingInfo;
+  paymentMethod: PaymentMethod;
   status: OrderStatus;
-  items: OrderLineItem[];
-  totals: CartTotals;
-  shippingAddress: Address;
-  billingAddress: Address;
-  payment: PaymentSummary;
-  notes?: string;
+  totals: OrderTotals;
 }
 
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
+export interface CartState {
+  items: CartItem[];
+  status: CartStatus;
+  currency: CurrencyCode;
+  lastUpdated: string | null;
 }
 
-export interface FilterQuery {
-  search?: string;
-  category?: ProductCategory | 'all';
-  minPrice?: number;
-  maxPrice?: number;
-  sortBy?:
-    | 'featured'
-    | 'price-asc'
-    | 'price-desc'
-    | 'newest'
-    | 'volume-asc'
-    | 'volume-desc';
+export type CartActionType =
+  | 'ADD_ITEM'
+  | 'REMOVE_ITEM'
+  | 'UPDATE_QUANTITY'
+  | 'CLEAR_CART'
+  | 'SET_STATUS';
+
+export interface CartActionBase {
+  type: CartActionType;
 }
 
-export type LocalStorageSchema = {
-  cart: CartState;
-  lastOrder?: Order;
-  designs: CustomLabelDesign[];
-};
+export interface AddItemAction extends CartActionBase {
+  type: 'ADD_ITEM';
+  payload: {
+    product: Product;
+    variant: ProductVariant;
+    quantity?: number;
+    customLabel?: CustomLabel;
+  };
+}
 
-export default {};
+export interface RemoveItemAction extends CartActionBase {
+  type: 'REMOVE_ITEM';
+  payload: { cartItemId: ID };
+}
+
+export interface UpdateQuantityAction extends CartActionBase {
+  type: 'UPDATE_QUANTITY';
+  payload: { cartItemId: ID; quantity: number };
+}
+
+export interface ClearCartAction extends CartActionBase {
+  type: 'CLEAR_CART';
+}
+
+export interface SetStatusAction extends CartActionBase {
+  type: 'SET_STATUS';
+  payload: { status: CartStatus };
+}
+
+export type CartAction =
+  | AddItemAction
+  | RemoveItemAction
+  | UpdateQuantityAction
+  | ClearCartAction
+  | SetStatusAction;
+
+export interface PriceRangeFilter {
+  min?: number;
+  max?: number;
+}
+
+export type SortOption =
+  | 'featured'
+  | 'price-asc'
+  | 'price-desc'
+  | 'name-asc'
+  | 'name-desc';
+
+export interface ProductFilters {
+  searchQuery?: string;
+  categories?: ProductCategory[];
+  sizes?: BottleSizeMl[];
+  finishes?: BottleFinish[];
+  priceRange?: PriceRangeFilter;
+  sortBy?: SortOption;
+}
+
+const types = {};
+export default types;
