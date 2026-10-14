@@ -1,161 +1,203 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type {
-  CartContextValue,
-  CartItem,
-  CartTotals,
-  LabelCustomization,
-  Product,
-  UserInput,
-} from '@/types';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  ReactNode,
+} from 'react';
 import { toast } from 'sonner';
+import type {
+  CartAction,
+  CartItem,
+  CartState,
+  Product,
+  CustomLabel,
+} from '@/types';
 
-const CartContext = createContext<CartContextValue | undefined>(undefined);
+const STORAGE_KEY = 'nishant-waters-cart';
 
-const FREE_SHIPPING_THRESHOLD_CENTS = 5000;
-const FLAT_SHIPPING_CENTS = 499;
-
-function clampQuantity(qty: number | undefined): number {
-  const n = Number.isFinite(qty) ? (qty as number) : 1;
-  return Math.min(10, Math.max(1, n));
+interface CartContextValue {
+  items: CartItem[];
+  itemCount: number;
+  subtotal: number;
+  drawerOpen: boolean;
+  setDrawerOpen: (open: boolean) => void;
+  addCustomizedItem: (product: Product, customLabel?: CustomLabel, quantity?: number) => void;
+  removeItem: (id: string) => void;
+  updateQty: (id: string, quantity: number) => void;
+  clearCart: () => void;
+  checkout: () => void;
 }
 
-function computeTotals(items: CartItem[]): CartTotals {
-  const itemCount = items?.reduce((sum, item) => sum + (item?.quantity ?? 0), 0) ?? 0;
-  const subtotalCents =
-    items?.reduce((sum, item) => sum + (item?.unitPriceCents ?? 0) * (item?.quantity ?? 0), 0) ?? 0;
-  const qualifiesForFreeShipping = subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS;
-  const shippingCents = items?.length ? (qualifiesForFreeShipping ? 0 : FLAT_SHIPPING_CENTS) : 0;
-  const discountCents = 0;
-  const totalCents = subtotalCents + shippingCents - discountCents;
-  return {
-    itemCount,
-    subtotalCents,
-    shippingCents,
-    discountCents,
-    totalCents,
-    qualifiesForFreeShipping,
-  };
-}
+const CartContextRaw = createContext<CartContextValue>({
+  items: [],
+  itemCount: 0,
+  subtotal: 0,
+  drawerOpen: false,
+  setDrawerOpen: () => undefined,
+  addCustomizedItem: () => undefined,
+  removeItem: () => undefined,
+  updateQty: () => undefined,
+  clearCart: () => undefined,
+  checkout: () => undefined,
+});
 
-export function CartProvider({ children }: { children?: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-
-  const openCart = useCallback(() => {
-    setIsOpen(true);
-  }, []);
-
-  const closeCart = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  const addItem = useCallback((product: Product, input?: Partial<UserInput>) => {
-    if (!product?.id) return;
-    const quantity = clampQuantity(input?.quantity ?? 1);
-    const label: LabelCustomization = {
-      text: input?.labelText ?? 'Nishant Waters',
-      colorToken: input?.labelColorToken ?? 'mint',
+function cartReducer(state: CartState, action: CartAction): CartState {
+  if (action.type === 'SET_CART') {
+    const next = (action.payload as CartState) ?? { items: [] };
+    return { items: next.items ?? [] };
+  }
+  if (action.type === 'ADD_ITEM') {
+    const item = action.payload as CartItem;
+    const existingIndex = state.items.findIndex(i => i.id === item.id);
+    if (existingIndex >= 0) {
+      const items = [...state.items];
+      items[existingIndex] = item;
+      return { items };
+    }
+    return { items: [...state.items, item] };
+  }
+  if (action.type === 'REMOVE_ITEM') {
+    const id = action.payload as string;
+    return { items: state.items.filter(i => i.id !== id) };
+  }
+  if (action.type === 'UPDATE_QUANTITY') {
+    const { id, quantity } = (action.payload ?? {}) as { id: string; quantity: number };
+    return {
+      items: state.items.map(i => (i.id === id ? { ...i, quantity } : i)),
     };
-    const variantId = input?.selectedVariantId ?? product?.variants?.[0]?.id;
-    const unitPriceCents =
-      product?.variants?.find(v => v?.id === variantId)?.priceCents ??
-      product?.basePriceCents ??
-      0;
+  }
+  if (action.type === 'CLEAR_CART') {
+    return { items: [] };
+  }
+  return state;
+}
 
-    const key = `${product?.id}-${variantId ?? 'base'}-${label.colorToken}-${label.text}`;
-    setItems(prev => {
-      const existing = prev?.find(item => item?.id === key);
-      if (existing) {
-        const nextQty = clampQuantity(existing.quantity + quantity);
-        const updated = prev?.map(item =>
-          item?.id === key ? { ...item, quantity: nextQty } : item
-        );
-        toast.success('Updated your bottle set');
-        return updated;
-      }
-      const next: CartItem = {
-        id: key,
+function safeParseCart(value: string | null): CartState {
+  if (!value) return { items: [] };
+  try {
+    const parsed = JSON.parse(value) as CartState;
+    if (!parsed?.items) return { items: [] };
+    return { items: parsed.items };
+  } catch {
+    return { items: [] };
+  }
+}
+
+function createLineItemId(productId: string, customLabel?: CustomLabel): string {
+  const base = `${productId}-${customLabel?.text ?? ''}-${customLabel?.color ?? ''}-${customLabel?.font ?? ''}`;
+  return btoa(unescape(encodeURIComponent(base))).slice(0, 32);
+}
+
+export function CartProvider({ children }: { children?: ReactNode }) {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+    const initial = safeParseCart(stored);
+    dispatch({ type: 'SET_CART', payload: initial });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // ignore
+    }
+  }, [state]);
+
+  const subtotal = useMemo(
+    () =>
+      state.items.reduce(
+        (sum, item) => sum + (item.unitPrice ?? 0) * (item.quantity ?? 0),
+        0,
+      ),
+    [state.items],
+  );
+
+  const itemCount = useMemo(
+    () => state.items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
+    [state.items],
+  );
+
+  const addCustomizedItem = useCallback(
+    (product: Product, customLabel?: CustomLabel, quantity: number = 1) => {
+      const clampedQty = Math.min(10, Math.max(1, quantity ?? 1));
+      const id = createLineItemId(product.id, customLabel);
+      const existing = state.items.find(i => i.id === id);
+      const newQuantity = Math.min(10, (existing?.quantity ?? 0) + clampedQty);
+      const now = new Date().toISOString();
+      const item: CartItem = {
+        id,
         productId: product.id,
         productName: product.name,
-        productImageUrl: product.imageUrl,
-        unitPriceCents,
-        quantity,
-        variantId,
-        label,
+        imageUrl: product.imageUrl,
+        unitPrice: product.price,
+        quantity: existing ? newQuantity : clampedQty,
+        customLabel,
+        createdAt: existing?.createdAt ?? now,
       };
-      toast.success('Added to cart');
-      return [...(prev ?? []), next];
-    });
-    setIsOpen(true);
-  }, []);
-
-  const updateItem = useCallback(
-    (id: string, patch: Partial<Pick<CartItem, 'quantity' | 'label'>>) => {
-      if (!id) return;
-      setItems(prev => {
-        const exists = prev?.some(item => item?.id === id);
-        if (!exists) {
-          toast.error('Item not found in cart');
-          return prev ?? [];
-        }
-        const updated = prev?.map(item => {
-          if (item?.id !== id) return item;
-          const nextQuantity = patch.quantity ? clampQuantity(patch.quantity) : item.quantity;
-          const nextLabel: LabelCustomization = {
-            text: patch.label?.text ?? item.label.text,
-            colorToken: patch.label?.colorToken ?? item.label.colorToken,
-          };
-          return { ...item, quantity: nextQuantity, label: nextLabel };
-        });
-        toast.success('Cart updated');
-        return updated;
+      dispatch({ type: 'ADD_ITEM', payload: item });
+      setDrawerOpen(true);
+      toast.success('Added to cart', {
+        description: `${product.name} • Qty ${item.quantity}`,
       });
     },
-    []
+    [state.items],
   );
 
   const removeItem = useCallback((id: string) => {
-    if (!id) return;
-    setItems(prev => {
-      const next = prev?.filter(item => item?.id !== id) ?? [];
-      toast.success('Removed from cart');
-      return next;
-    });
+    dispatch({ type: 'REMOVE_ITEM', payload: id });
+    toast('Item removed', { description: 'This bottle has been taken out of your cart.' });
+  }, []);
+
+  const updateQty = useCallback((id: string, quantity: number) => {
+    const clamped = Math.min(10, Math.max(1, quantity ?? 1));
+    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity: clamped } });
   }, []);
 
   const clearCart = useCallback(() => {
-    setItems([]);
-    toast.success('Cart cleared');
+    dispatch({ type: 'CLEAR_CART' });
   }, []);
 
-  const totals = useMemo(() => computeTotals(items ?? []), [items]);
+  const checkout = useCallback(() => {
+    if (!state.items.length) {
+      toast.error('Your cart is empty');
+      return;
+    }
+    const total = subtotal;
+    toast.success('Order confirmed', {
+      description: `Your Nishant Waters order is on its way • ₹${total.toFixed(0)}`,
+    });
+    dispatch({ type: 'CLEAR_CART' });
+    setDrawerOpen(false);
+  }, [state.items.length, subtotal]);
 
-  const value: CartContextValue = useMemo(
-    () => ({
-      items: items ?? [],
-      totals,
-      freeShippingThresholdCents: FREE_SHIPPING_THRESHOLD_CENTS,
-      isOpen,
-      openCart,
-      closeCart,
-      addItem,
-      updateItem,
-      removeItem,
-      clearCart,
-    }),
-    [items, totals, isOpen, openCart, closeCart, addItem, updateItem, removeItem, clearCart]
-  );
+  const value: CartContextValue = {
+    items: state.items,
+    itemCount,
+    subtotal,
+    drawerOpen,
+    setDrawerOpen,
+    addCustomizedItem,
+    removeItem,
+    updateQty,
+    clearCart,
+    checkout,
+  };
 
-  return <CartContext.Provider value={value}>{children ?? null}</CartContext.Provider>;
+  return <CartContextRaw.Provider value={value}>{children}</CartContextRaw.Provider>;
 }
 
 export function useCart(): CartContextValue {
-  const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return ctx;
+  return useContext(CartContextRaw);
 }
 
-export default CartContext;
-export { CartContext };
+export const CartContext = CartContextRaw;
+export default CartContextRaw;
+export { CartContextRaw };

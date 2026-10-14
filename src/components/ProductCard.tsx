@@ -1,135 +1,98 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Product } from '@/types';
-import { useCart } from '@/context/CartContext';
+import type { Product } from '@/types';
 
 export interface ProductCardProps {
   product?: Product;
-  showQuickAdd?: boolean;
+  onCustomize?: (product: Product) => void;
   className?: string;
 }
 
 export function ProductCard({
   product,
-  showQuickAdd = true,
+  onCustomize,
   className = '',
 }: ProductCardProps) {
-  const navigate = useNavigate();
-  const { addItem, openCart } = useCart();
+  if (!product) {
+    return null;
+  }
 
-  const handleViewDetails = () => {
-    if (!product?.slug) return;
-    navigate(`/product/${product.slug}`);
+  const handleCustomize = () => {
+    onCustomize?.(product);
   };
-
-  const handleQuickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    if (!product) return;
-    const defaultVariant = product.variants?.find((v) => v?.inStock) ?? product.variants?.[0];
-    addItem(product, {
-      labelText: product.name ?? 'Nishant Waters',
-      labelColorToken: 'mint',
-      quantity: 1,
-      selectedVariantId: defaultVariant?.id,
-    });
-    toast.success('Added to cart', {
-      description: `${product.name ?? 'Bottle'} added with default label.`,
-    });
-    openCart();
-  };
-
-  if (!product) return null;
-
-  const primaryTag = product.tags?.[0];
 
   return (
     <motion.article
-      layout
-      whileHover={{ y: -4 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      whileHover={{ y: -8 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 24 }}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-[16px] bg-[#14241e] border border-[#244337]/60',
-        'shadow-[0_18px_45px_rgba(0,0,0,0.55)]',
+        'group relative flex flex-col overflow-hidden rounded-[18px] border border-[#e6d8c8] bg-[#fff7ee] shadow-sm',
+        'hover:shadow-xl transition-shadow duration-300',
         className
       )}
-      onClick={handleViewDetails}
     >
       <div className="relative overflow-hidden">
-        {primaryTag ? (
-          <div className="pointer-events-none absolute left-4 top-4 z-10">
-            <span className="inline-flex bg-[#0b1411]/80 border border-[#244337]/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.2em] uppercase text-[#a7d7c4] rounded-sm backdrop-blur">
-              {primaryTag}
-            </span>
-          </div>
-        ) : null}
-        <div className="aspect-[3/4] w-full overflow-hidden">
+        <div className="aspect-[3/4] w-full bg-[#f4e9dc]">
           <img
-            src={product.imageUrl ?? 'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=800&q=80'}
+            src={product.imageUrl}
             crossOrigin="anonymous"
-            alt={product.name ?? 'Water bottle'}
-            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            alt={product.name}
+            className={cn(
+              'h-full w-full object-cover',
+              'transition-transform duration-500 ease-out',
+              'group-hover:scale-105'
+            )}
           />
         </div>
-        {product.secondaryImageUrl ? (
-          <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-            <img
-              src={product.secondaryImageUrl ?? ''}
-              crossOrigin="anonymous"
-              alt={`${product.name ?? 'Water bottle'} alternate view`}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ) : null}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0b1411] via-[#0b1411]/60 to-transparent" />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b1f2a]/35 via-transparent to-transparent opacity-0 
+          group-hover:opacity-100 transition-opacity duration-500"
+        />
       </div>
-      <div className="flex flex-1 flex-col justify-between px-4 pb-4 pt-3">
-        <div className="space-y-1">
-          <p className="text-[11px] tracking-[0.22em] uppercase text-[#a7d7c4]">
-            {product.category ?? 'Still'}
-          </p>
-          <h3 className="font-['Playfair_Display'] text-lg leading-tight text-[#ecfdf5]">
-            {product.name ?? 'Signature Glass Bottle'}
-          </h3>
-          <p className="text-xs text-[#a7d7c4] line-clamp-2">
-            {product.description ?? 'Custom-labeled, small-batch mineral water in hand-finished glass.'}
-          </p>
+
+      <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <h3 className="font-['Sora'] text-lg font-light tracking-tight text-[#0b1f2a]">
+              {product.name}
+            </h3>
+            <p className="mt-1 text-xs uppercase tracking-[0.22em] text-[#4b5a63]">
+              {product.volumeMl} ml • {product.tags?.[0] ?? 'Signature'}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-['Sora'] text-base font-semibold text-[#0b1f2a]">
+              ₹{product.price.toLocaleString('en-IN')}
+            </p>
+          </div>
         </div>
+
+        <p className="line-clamp-2 font-['Lora'] text-xs text-[#4b5a63]">
+          {product.description}
+        </p>
+
         <div className="mt-4 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-[#ecfdf5]">
-              ₹{((product.basePriceCents ?? 25000) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-            </p>
-            <p className="text-[11px] text-[#a7d7c4]">
-              Includes custom label
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <motion.button
-              type="button"
-              whileHover={{ x: 2 }}
-              whileTap={{ scale: 0.96 }}
-              className="inline-flex items-center gap-1 rounded-md bg-[#10b981] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-black"
-            >
-              <span>Details</span>
-              <ArrowRight className="h-3 w-3" />
-            </motion.button>
-            {showQuickAdd ? (
-              <motion.button
-                type="button"
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={handleQuickAdd}
-                className="inline-flex items-center gap-1 rounded-sm border border-[#244337] bg-[#0b1411]/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ecfdf5] opacity-0 shadow-sm transition-opacity duration-300 group-hover:opacity-100"
-              >
-                <ShoppingBag className="h-3 w-3" />
-                <span>Add</span>
-              </motion.button>
-            ) : null}
-          </div>
+          <div
+            className="h-6 w-6 rounded-full border border-[#e6d8c8]"
+            style={{ backgroundColor: product.accentColor ?? '#004e89' }}
+          />
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.96 }}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md px-3 py-1.5',
+              'border border-[#0b1f2a] bg-[#0b1f2a] text-xs font-semibold uppercase tracking-[0.24em]',
+              'text-[#ffffff] shadow-sm',
+              'hover:bg-[#004e89] hover:border-[#004e89]',
+              'transition-colors duration-200'
+            )}
+            onClick={handleCustomize}
+          >
+            <span>Customize Label</span>
+            <ArrowRight className="h-3 w-3" />
+          </motion.button>
         </div>
       </div>
     </motion.article>

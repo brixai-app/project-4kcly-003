@@ -1,41 +1,14 @@
-export type Category =
-  | 'Still'
-  | 'Sparkling'
-  | 'Mineral'
-  | 'Flavored'
-  | 'Limited'
-  | 'Bundle';
+export type FontOption = 'serif' | 'sans' | 'script';
 
-export type Tag =
-  | 'Glass'
-  | 'Aluminum'
-  | 'BPA-Free'
-  | 'Recycled'
-  | 'Refillable'
-  | 'CarbonNeutral'
-  | 'New'
-  | 'Bestseller'
-  | 'LimitedRun';
-
-export type LabelColorToken =
-  | 'sand'
-  | 'slate'
-  | 'forest'
-  | 'mint'
-  | 'ink'
-  | 'amber';
-
-export interface LabelCustomization {
-  text: string;
-  colorToken: LabelColorToken;
+export interface ValidationResult {
+  valid: boolean;
+  message?: string;
 }
 
-export interface ProductVariant {
-  id: string;
-  name: string;
-  volumeMl: number;
-  priceCents: number;
-  inStock: boolean;
+export interface CustomLabel {
+  text: string;
+  color: string;
+  font: FontOption;
 }
 
 export interface Product {
@@ -43,54 +16,55 @@ export interface Product {
   name: string;
   slug: string;
   description: string;
-  category: Category;
-  tags: Tag[];
-  basePriceCents: number;
+  price: number;
+  volumeMl: number;
   imageUrl: string;
-  secondaryImageUrl?: string;
-  isFeatured: boolean;
-  variants: ProductVariant[];
+  accentColor: string;
+  tags: string[];
+  featured?: boolean;
 }
 
 export interface CartItem {
   id: string;
   productId: string;
   productName: string;
-  productImageUrl: string;
-  unitPriceCents: number;
+  imageUrl: string;
+  unitPrice: number;
   quantity: number;
-  variantId?: string;
-  label: LabelCustomization;
+  customLabel?: CustomLabel;
+  createdAt: string;
 }
 
-export interface CartTotals {
-  itemCount: number;
-  subtotalCents: number;
-  shippingCents: number;
-  discountCents: number;
-  totalCents: number;
-  qualifiesForFreeShipping: boolean;
-}
-
-export interface UserInput {
-  labelText: string;
-  labelColorToken: LabelColorToken;
-  quantity: number;
-  selectedVariantId?: string;
-}
-
-export interface CartContextValue {
+export interface Order {
+  id: string;
   items: CartItem[];
-  totals: CartTotals;
-  freeShippingThresholdCents: number;
-  isOpen: boolean;
-  openCart: () => void;
-  closeCart: () => void;
-  addItem: (product: Product, input?: Partial<UserInput>) => void;
-  updateItem: (id: string, patch: Partial<Pick<CartItem, 'quantity' | 'label'>>) => void;
-  removeItem: (id: string) => void;
-  clearCart: () => void;
+  subtotal: number;
+  shipping: number;
+  total: number;
+  createdAt: string;
+  customerEmail?: string;
 }
 
-export const types = {};
-export default types;
+export interface CartState {
+  items: CartItem[];
+}
+
+export type CartActionType =
+  | 'ADD_ITEM'
+  | 'REMOVE_ITEM'
+  | 'UPDATE_QUANTITY'
+  | 'CLEAR_CART'
+  | 'SET_CART';
+
+export interface CartAction {
+  type: CartActionType;
+  payload?: unknown;
+}
+
+export type ProfanityFilter = (value: string) => ValidationResult;
+
+export type Nullable<T> = T | null;
+
+export type WithId<T> = T & { id: string };
+
+export default {};

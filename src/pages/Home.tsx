@@ -4,187 +4,200 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { products } from '@/data/mockData';
 import ProductCard from '@/components/ProductCard';
+import type { Product } from '@/types';
 
-export function Home() {
-  const featured = products?.filter((p) => p?.isFeatured)?.slice(0, 4) ?? [];
-  const shopAll = products?.slice(0, 6) ?? [];
+export interface HomeProps {
+  onSelectProduct?: (product: Product) => void;
+}
+
+export function Home({ onSelectProduct }: HomeProps) {
+  const featured = products?.filter(p => p?.featured) ?? [];
 
   return (
-    <div className="min-h-screen bg-[#0b1411] text-[#ecfdf5]">
-      <div className="relative">
-        <div className="relative h-[80vh] w-full overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1400&q=85"
-            crossOrigin="anonymous"
-            alt="Editorial water lookbook"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0b1411] via-[#0b1411]/70 to-transparent" />
-          <div className="pointer-events-none absolute -left-32 top-10 h-80 w-80 rounded-full bg-[#10b981]/10 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full bg-[#10b981]/20 blur-3xl" />
-          <div className="relative z-10 mx-auto flex h-full max-w-6xl items-center px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
-              className="max-w-xl space-y-6"
-            >
-              <p className="text-xs font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase">
-                NISHANT WATERS
-              </p>
-              <h1 className="font-['Playfair_Display'] text-6xl md:text-7xl leading-tight tracking-tight">
-                Water, written
-                <br />
-                in your language.
-              </h1>
-              <p className="max-w-md text-sm md:text-base text-[#a7d7c4] font-['Plus_Jakarta_Sans']">
-                Eco-forward, custom-labeled bottles crafted for studios, galleries, and gatherings
-                that care about every detail.
-              </p>
-              <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-[#f4e9dc] text-[#0b1f2a]">
+      <main className="flex flex-col gap-20 pb-20">
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0">
+            <motion.img
+              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1400&q=85"
+              crossOrigin="anonymous"
+              alt="Editorial water bottles on a sculpted surface"
+              className="h-full w-full object-cover"
+              initial={{ scale: 1.05 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 1.6, ease: 'easeOut' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#f4e9dc]/95 via-[#f4e9dc]/80 to-transparent" />
+          </div>
+
+          <div className="relative mx-auto flex max-w-6xl flex-col gap-12 px-6 py-24 lg:px-8 lg:py-28">
+            <div className="max-w-xl">
+              <motion.p
+                className="inline-flex border border-[#e6d8c8] bg-[#fff7ee]/90 px-3 py-1 text-xs font-semibold tracking-[0.2em] text-[#4b5a63]/80"
+                initial={{ y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                NISHANT WATERS / CUSTOM LABELLED
+              </motion.p>
+              <motion.h1
+                className="mt-6 font-[Sora] text-5xl leading-tight tracking-tight text-[#0b1f2a] sm:text-6xl"
+                initial={{ y: 24, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+              >
+                Water that{" "}
+                <span className="underline decoration-[#004e89] decoration-2 underline-offset-8">
+                  remembers
+                </span>{" "}
+                your name.
+              </motion.h1>
+              <motion.p
+                className="mt-6 max-w-lg font-[Lora] text-base leading-relaxed text-[#4b5a63]"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+              >
+                Tactile glass, soft sand tones, and labels typed just for you.
+                Designed for rooftops at dusk, boardrooms at dawn, and every
+                ritual that deserves better than disposable plastic.
+              </motion.p>
+              <motion.div
+                className="mt-10 flex items-center gap-6"
+                initial={{ y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.7, delay: 0.4 }}
+              >
                 <Link
                   to="/shop"
-                  className="inline-flex items-center gap-2 rounded-md bg-[#10b981] px-6 py-3 text-sm font-semibold tracking-[0.2em] text-black uppercase hover:bg-[#0ea371] transition-colors"
+                  className="inline-flex items-center gap-2 rounded-[18px] bg-[#004e89] px-7 py-3 text-sm font-semibold tracking-[0.16em] text-white transition-colors hover:bg-[#003b67]"
                 >
-                  Explore Collection
+                  EXPLORE COLLECTION
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link
-                  to="/shop?category=Limited"
-                  className="text-xs font-semibold tracking-[0.2em] text-[#a7d7c4] uppercase hover:text-[#ecfdf5] transition-colors"
-                >
-                  Limited mineral edits
-                </Link>
-              </div>
+                <div className="hidden flex-col text-xs text-[#4b5a63] sm:flex">
+                  <span className="font-semibold tracking-[0.18em]">
+                    GLASS / REFILLABLE / PERSONAL
+                  </span>
+                  <span className="mt-1">
+                    Free shipping on curated sets within India.
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              className="ml-auto flex max-w-md flex-col gap-4 rounded-[24px] bg-[#fff7ee]/95 p-5 shadow-[0_18px_60px_rgba(11,31,42,0.25)] backdrop-blur"
+              initial={{ x: 40, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.7, delay: 0.35 }}
+            >
+              <p className="text-xs font-semibold tracking-[0.2em] text-[#4b5a63]">
+                WATER, EDITED FOR YOU
+              </p>
+              <p className="font-[Lora] text-sm text-[#0b1f2a]">
+                Choose label color, typography, and a line of text. We print on
+                warm matte stock that wraps like a second skin.
+              </p>
             </motion.div>
           </div>
-        </div>
+        </section>
 
-        <section className="mx-auto -mt-12 max-w-6xl space-y-12 px-6 pb-20">
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              {
-                title: 'Circular by design',
-                body: 'Aluminum and glass-first silhouettes, refillable and infinitely recyclable.',
-              },
-              {
-                title: 'Custom label atelier',
-                body: 'Typeface-perfect labels tuned to your event, gallery, or studio identity.',
-              },
-              {
-                title: 'Carbon-neutral delivery',
-                body: 'Chilled, on-time drops with emissions balanced on every order.',
-              },
-            ].map((item) => (
-              <div
-                key={item?.title ?? ''}
-                className="rounded-2xl bg-[#14241e] border border-[#244337] px-5 py-6"
-              >
-                <p className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase mb-3">
-                  {item?.title ?? ''}
-                </p>
-                <p className="text-sm text-[#ecfdf5]/90 font-['Plus_Jakarta_Sans']">
-                  {item?.body ?? ''}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <section className="grid gap-6 md:grid-cols-[1.3fr,1fr] items-stretch">
-            <div className="rounded-2xl bg-[#14241e] border border-[#244337] p-5 flex flex-col">
-              <div className="flex items-baseline justify-between mb-4">
-                <h2 className="font-['Playfair_Display'] text-2xl tracking-tight">
-                  Featured vessels
-                </h2>
-                <span className="text-[10px] tracking-[0.25em] text-[#a7d7c4] uppercase">
-                  CURATED DROP
-                </span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {featured?.map((product) => (
-                  <ProductCard
-                    key={product?.id ?? ''}
-                    product={product}
-                    showQuickAdd
-                    className="h-full"
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="relative overflow-hidden rounded-2xl bg-[#14241e] border border-[#244337]">
-              <img
-                src="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&q=85"
-                crossOrigin="anonymous"
-                alt="Mineral water still life"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1411] via-[#0b1411]/60 to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5 space-y-2">
-                <p className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase">
-                  STUDIO SERVICE
-                </p>
-                <p className="font-['Playfair_Display'] text-xl">
-                  Palette-matched labels for openings and residencies.
-                </p>
-                <p className="text-xs text-[#a7d7c4]">
-                  Submit your brand assets at checkout and our team will tune the label for print.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-5">
-            <div className="flex items-end justify-between">
+        <section className="bg-[#fff7ee]">
+          <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8">
+            <div className="flex items-end justify-between gap-6">
               <div>
-                <h2 className="font-['Playfair_Display'] text-2xl tracking-tight">
-                  Shop the selection
-                </h2>
-                <p className="text-xs text-[#a7d7c4]">
-                  Still, sparkling, and flavored edits ready for your next gathering.
+                <p className="text-xs font-semibold tracking-[0.18em] text-[#4b5a63]">
+                  CURATED DROP
                 </p>
+                <h2 className="mt-3 font-[Sora] text-2xl tracking-tight text-[#0b1f2a]">
+                  Featured bottles for quiet, precise rituals.
+                </h2>
               </div>
               <Link
                 to="/shop"
-                className="text-[10px] font-semibold tracking-[0.25em] text-[#a7d7c4] uppercase hover:text-[#ecfdf5] transition-colors"
+                className="text-xs font-semibold tracking-[0.18em] text-[#004e89] hover:text-[#003b67]"
               >
-                View all
+                VIEW ALL
               </Link>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {shopAll?.map((product) => (
-                <ProductCard
-                  key={product?.id ?? ''}
-                  product={product}
-                  showQuickAdd
-                />
-              ))}
+            <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {(featured.length > 0 ? featured : products.slice(0, 3)).map(
+                product => (
+                  <ProductCard
+                    key={product?.id}
+                    product={product}
+                    onCustomize={onSelectProduct}
+                  />
+                )
+              )}
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className="rounded-2xl border border-[#244337] bg-[#14241e] px-5 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="h-7 w-7 rounded-md bg-[#10b981] text-black flex items-center justify-center text-xs font-semibold">
-                NW
-              </span>
-              <div>
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-[#a7d7c4]">
-                  ANNOUNCEMENT
+        <section className="bg-[#f4e9dc]">
+          <div className="mx-auto max-w-5xl px-6 py-16 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[1.3fr,1fr]">
+              <div className="rounded-[24px] border border-[#e6d8c8] bg-[#fff7ee] p-8">
+                <p className="text-xs font-semibold tracking-[0.2em] text-[#4b5a63]">
+                  MANIFESTO
                 </p>
-                <p className="text-sm">
-                  Complimentary label proofs on all orders above ₹12,000. Free chilled delivery at
-                  ₹18,000.
+                <h3 className="mt-4 font-[Sora] text-2xl tracking-tight text-[#0b1f2a]">
+                  A bottle that feels like stationery.
+                </h3>
+                <p className="mt-4 font-[Lora] text-sm leading-relaxed text-[#4b5a63]">
+                  Nishant Waters began as a note passed across a long table:
+                  “what if water looked as considered as the agenda?” Today,
+                  every bottle leaves our studio with the calm of good paper and
+                  the weight of an intentional object.
+                </p>
+                <p className="mt-4 font-[Lora] text-sm leading-relaxed text-[#4b5a63]">
+                  We work with warm-toned glass, low-gloss finishes, and
+                  typography that whispers instead of shouts. No loud logos, no
+                  disposable noise—just your name, your event, your moment.
                 </p>
               </div>
+              <div className="flex flex-col gap-4">
+                <div className="rounded-[18px] border border-[#e6d8c8] bg-[#fff7ee] px-5 py-4 text-xs text-[#4b5a63]">
+                  Plastic-free glass vessels with replaceable custom labels.
+                </div>
+                <div className="rounded-[18px] border border-dashed border-[#e6d8c8] bg-[#f4e9dc] px-5 py-4 text-xs text-[#4b5a63]">
+                  Printed in small batches in India. Ships with recycled pulp
+                  cradles and zero-fuss unboxing.
+                </div>
+              </div>
             </div>
-            <Link
-              to="/shop?category=Bundle"
-              className="text-[10px] font-semibold tracking-[0.25em] uppercase text-[#ecfdf5] hover:text-[#10b981] transition-colors"
-            >
-              Browse service bundles
-            </Link>
-          </section>
+          </div>
         </section>
-      </div>
+
+        <section className="bg-[#fff7ee]">
+          <div className="mx-auto max-w-3xl px-6 py-16 text-center lg:px-8">
+            <p className="text-xs font-semibold tracking-[0.2em] text-[#4b5a63]">
+              STAY WITH THE CURRENT
+            </p>
+            <h3 className="mt-4 font-[Sora] text-2xl tracking-tight text-[#0b1f2a]">
+              Notes on new drops, collaborations, and quiet gatherings.
+            </h3>
+            <p className="mt-4 font-[Lora] text-sm text-[#4b5a63]">
+              We write infrequently and only when there is something to pour.
+              No clutter, just considered announcements.
+            </p>
+            <form className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                className="h-11 flex-1 rounded-[14px] border border-[#e6d8c8] bg-white px-3 text-sm text-[#0b1f2a] placeholder:text-[#4b5a63]/60 focus:outline-none focus:ring-2 focus:ring-[#004e89]"
+              />
+              <button
+                type="submit"
+                className="h-11 rounded-[14px] bg-[#004e89] px-5 text-xs font-semibold tracking-[0.18em] text-white hover:bg-[#003b67]"
+              >
+                JOIN
+              </button>
+            </form>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
