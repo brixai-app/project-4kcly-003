@@ -1,704 +1,584 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Link, useParams, useNavigate } from "react-router-dom";
+import { Toaster, toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import Header from "./components/Header";
+import LabelDesignerDrawer from "./components/MainFeature";
+import CartDrawer, { CartLineItem } from "./components/SecondaryFeature";
 import {
-  HashRouter,
-  Routes,
-  Route,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Toaster } from 'sonner';
-import { Search, ShoppingBag, ArrowRight, Menu } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import Home from '@/pages/Home';
-import ShopPage from '@/pages/ShopPage';
-import ProductPage from '@/pages/ProductPage';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
-import DesignPage from '@/pages/DesignPage';
-import CheckoutPage from '@/pages/CheckoutPage';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
-import ProductDetailModal from '@/components/ProductDetailModal';
-import { CartProvider, useCart } from '@/context/CartContext';
-import mockData, { products as mockProducts } from '@/data/mockData';
-import {
-  ID,
-  Product,
-  ProductFilterState,
-  ProductSortState,
-  NishantWatersAppConfig,
-  defaultAppConfig,
-} from '@/types';
+  products,
+  aboutEditorial,
+  contactContent,
+  formatMoney,
+  emailRegex,
+  saveUserMessage,
+  palette,
+} from "./mock";
 
-export interface AppShellProps {
-  initialConfig?: NishantWatersAppConfig;
+// Cart context (client-only, MOCK state, no backend)
+interface CartContextValue {
+  items: CartLineItem[];
+  addItem: (payload: { productId: string; customLabel?: any | null }) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (id: string) => void;
+  clearCart: () => void;
 }
 
-export interface GlobalSearchState {
-  query: string;
-  isOpen: boolean;
-  source: 'header' | 'global';
-}
+const CartContext = createContext<CartContextValue | null>(null);
 
-export interface RouteTransitionWrapperProps {
-  children?: React.ReactNode;
-}
-
-export interface GlobalQuickSearchProps {
-  query?: string;
-  isOpen?: boolean;
-  onChangeQuery?: (value: string) => void;
-  onClose?: () => void;
-  onSelectResult?: (path: string) => void;
-}
-
-export interface SearchResultItem {
-  id: string;
-  label: string;
-  type: 'product' | 'category' | 'collection' | 'action';
-  path: string;
-  meta?: string;
-}
-
-export interface AppLayoutContextBarProps {
-  className?: string;
-}
-
-export interface FloatingCartTriggerProps {
-  className?: string;
-}
-
-const routeVariants = {
-  initial: {
-    opacity: 0,
-    y: 12,
-    scale: 0.99,
-  },
-  animate: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.42,
-      ease: [0.22, 0.61, 0.36, 1],
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -12,
-    scale: 0.99,
-    transition: {
-      duration: 0.28,
-      ease: [0.4, 0, 0.2, 1],
-    },
-  },
+const useCart = () => {
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error("CartContext missing");
+  return ctx;
 };
 
-export function useAppConfig(): NishantWatersAppConfig {
-  const [config, setConfig] = useState<NishantWatersAppConfig>(() => {
-    const fromMock = (mockData?.appConfig ?? null) as NishantWatersAppConfig | null;
-    return fromMock ?? defaultAppConfig;
-  });
+const AppShell: React.FC = () => {
+  const [items, setItems] = useState<CartLineItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [designerOpen, setDesignerOpen] = useState(false);
+  const [designerProductId, setDesignerProductId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('nishant-waters:appConfig') : null;
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as NishantWatersAppConfig;
-        setConfig(prev => ({
-          ...prev,
-          ...parsed,
-        }));
-      } catch {
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!config?.enablePersistence) return;
-    try {
-      window.localStorage.setItem('nishant-waters:appConfig', JSON.stringify(config));
-    } catch {
-    }
-  }, [config]);
-
-  return config;
-}
-
-export function useRouteChangeAnalytics() {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const event = {
-        path: location.pathname,
-        search: location.search,
-        hash: location.hash,
-        timestamp: new Date().toISOString(),
-      };
-      const queueRaw = window.sessionStorage.getItem('nishant-waters:route-events');
-      const queue = queueRaw ? (JSON.parse(queueRaw) as unknown[]) : [];
-      queue.push(event);
-      if (queue.length > 40) {
-        queue.shift();
-      }
-      window.sessionStorage.setItem('nishant-waters:route-events', JSON.stringify(queue));
-    } catch {
-    }
-  }, [location]);
-}
-
-export function buildSearchIndex(products: Product[]): SearchResultItem[] {
-  const items: SearchResultItem[] = [];
-
-  products.forEach(product => {
-    items.push({
-      id: product.id as unknown as string,
-      label: product.name,
-      type: 'product',
-      path: `/product/${product.meta?.slug ?? product.id}`,
-      meta: `${product.collection} • ${product.hydrationProfile}`,
-    });
-
-    if (product.category) {
-      items.push({
-        id: `${product.id as unknown as string}-cat`,
-        label: `Shop ${product.category} waters`,
-        type: 'category',
-        path: `/shop?category=${product.category}`,
-        meta: 'Category',
-      });
-    }
-  });
-
-  items.push(
-    {
-      id: 'action-shop-all',
-      label: 'Browse all bottles',
-      type: 'action',
-      path: '/shop',
-      meta: 'Action',
-    },
-    {
-      id: 'action-start-design',
-      label: 'Open label studio',
-      type: 'action',
-      path: '/design',
-      meta: 'Design',
-    },
-    {
-      id: 'action-contact',
-      label: 'Speak with concierge',
-      type: 'action',
-      path: '/contact',
-      meta: 'Support',
-    },
-  );
-
-  return items;
-}
-
-export function filterSearchResults(index: SearchResultItem[], query: string): SearchResultItem[] {
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed) {
-    return index.slice(0, 8);
-  }
-  const scored = index
-    .map(item => {
-      const label = item.label.toLowerCase();
-      const meta = item.meta?.toLowerCase() ?? '';
-      let score = 0;
-      if (label === trimmed) score += 6;
-      if (label.startsWith(trimmed)) score += 4;
-      if (label.includes(trimmed)) score += 3;
-      if (meta.includes(trimmed)) score += 1;
-      if (item.type === 'product') score += 1;
-      if (item.type === 'action') score -= 1;
-      return { item, score };
-    })
-    .filter(entry => entry.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return scored.slice(0, 10).map(entry => entry.item);
-}
-
-export function GlobalQuickSearch({
-  query = '',
-  isOpen = false,
-  onChangeQuery,
-  onClose,
-  onSelectResult,
-}: GlobalQuickSearchProps) {
-  const navigate = useNavigate();
-  const [internalQuery, setInternalQuery] = useState<string>(query);
-  const [isFocused, setIsFocused] = useState<boolean>(false);
-  const index = useMemo(() => buildSearchIndex(mockProducts ?? []), []);
-  const results = useMemo(
-    () => filterSearchResults(index, internalQuery),
-    [index, internalQuery],
-  );
-
-  useEffect(() => {
-    setInternalQuery(query);
-  }, [query]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose?.();
-      }
+  const addItem: CartContextValue["addItem"] = ({ productId, customLabel }) => {
+    const product = products.find((p) => p.id === productId)!;
+    const newItem: CartLineItem = {
+      id: `cart_${Math.random().toString(36).slice(2, 9)}`,
+      productId,
+      quantity: 1,
+      price: product.price,
+      customLabel: customLabel || null,
     };
-    window.addEventListener('keydown', handleKey);
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-    };
-  }, [isOpen, onClose]);
-
-  const handleChange = (value: string) => {
-    setInternalQuery(value);
-    onChangeQuery?.(value);
+    setItems((prev) => [...prev, newItem]);
+    setCartOpen(true);
   };
 
-  const handleSelect = (path: string) => {
-    onSelectResult?.(path);
-    navigate(path);
-    onClose?.();
+  const updateQuantity = (id: string, quantity: number) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity } : i)));
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const clearCart = () => setItems([]);
+
+  const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  const ctxValue = useMemo(
+    () => ({ items, addItem, updateQuantity, removeItem, clearCart }),
+    [items]
+  );
+
+  const openDesignerForProduct = (id: string) => {
+    setDesignerProductId(id);
+    setDesignerOpen(true);
   };
 
   return (
-    <AnimatePresence>
-      {isOpen ? (
-        <motion.div
-          className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center bg-black/30 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, transition: { duration: 0.18 } }}
-          exit={{ opacity: 0, transition: { duration: 0.18 } }}
-        >
-          <motion.div
-            className="pointer-events-auto mt-20 w-full max-w-3xl rounded-2xl border border-[#e7d6c6] bg-[#fff7ee] shadow-xl"
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
-            }}
-            exit={{
-              opacity: 0,
-              y: -8,
-              scale: 0.98,
-              transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
-            }}
-          >
-            <div className="border-b border-[#e7d6c6] px-4 py-2.5 md:px-5">
-              <div className="flex items-center gap-2 text-xs font-medium tracking-[0.18em] text-[#6b625a] uppercase">
-                <Search className="h-3.5 w-3.5" />
-                <span>Studio-wide search</span>
-                <span className="ml-auto text-[10px] opacity-70">
-                  Press Esc to close
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#e7d6c6] bg-[#fff7ee] px-3 py-2.5">
-                <Search className="h-4 w-4 flex-none text-[#6b625a]" />
-                <input
-                  value={internalQuery}
-                  onChange={event => handleChange(event.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  placeholder="Search bottles, flavors, occasions, or try “corporate gifting”"
-                  className="w-full bg-transparent text-sm font-medium text-[#333333] outline-none placeholder:text-[#b0a396]"
-                />
-                <span className="hidden items-center gap-1 rounded-lg border border-[#e7d6c6] px-2 py-1 text-[10px] font-medium text-[#6b625a] md:inline-flex">
-                  <span className="rounded-md bg-[#f5e9dc] px-1.5 py-0.5">⌘</span>
-                  <span>K</span>
-                </span>
-              </div>
-            </div>
-            <div className="max-h-[360px] overflow-y-auto px-2 py-2 md:px-3 md:py-3">
-              {results.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#e7d6c6] bg-[#f5e9dc] px-4 py-6 text-sm text-[#6b625a]">
-                  <div className="font-semibold text-[#333333]">
-                    No matches for “{internalQuery.trim()}”
-                  </div>
-                  <div className="mt-1">
-                    Try searching for an occasion (“wedding”), flavor mood (“citrus”), or open the full shop.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect('/shop')}
-                    className="mt-3 inline-flex items-center gap-1 rounded-md bg-[#007a8a] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white"
-                  >
-                    <span>Open Shop</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <ul className="space-y-1">
-                  {results.map(result => (
-                    <li key={result.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelect(result.path)}
-                        className={cn(
-                          'flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
-                          'hover:bg-[#f5e9dc]',
-                        )}
-                      >
-                        <div>
-                          <div className="font-medium text-[#333333]">
-                            {result.label}
-                          </div>
-                          <div className="mt-0.5 text-xs text-[#6b625a]">
-                            {result.meta ?? result.type}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b625a]">
-                          <span>
-                            {result.type === 'product'
-                              ? 'Product'
-                              : result.type === 'category'
-                              ? 'Category'
-                              : result.type === 'collection'
-                              ? 'Collection'
-                              : 'Action'}
-                          </span>
-                          <ArrowRight className="h-3 w-3" />
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
-  );
-}
-
-export function RouteTransitionWrapper({ children = null }: RouteTransitionWrapperProps) {
-  const location = useLocation();
-  useRouteChangeAnalytics();
-
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        variants={routeVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="min-h-[80vh]"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
-  );
-}
-
-export function AppLayoutContextBar({ className }: AppLayoutContextBarProps) {
-  const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const cart = useCart();
-  const step = cart?.activeCheckoutStep ?? 'details';
-
-  const currentLabel = useMemo(() => {
-    if (location.pathname.startsWith('/checkout')) {
-      if (step === 'details') return 'Guest details';
-      if (step === 'shipping') return 'Shipping';
-      if (step === 'review') return 'Review';
-      if (step === 'payment') return 'Payment';
-      if (step === 'confirmation') return 'Confirmation';
-      return 'Checkout';
-    }
-    if (location.pathname.startsWith('/design')) {
-      return 'Label Studio';
-    }
-    if (location.pathname.startsWith('/shop')) {
-      return 'Shop';
-    }
-    if (location.pathname.startsWith('/product')) {
-      return 'Product detail';
-    }
-    return 'Nishant Waters';
-  }, [location.pathname, step]);
-
-  const totalQuantity = cart?.getTotalQuantity() ?? 0;
-
-  return (
-    <div
-      className={cn(
-        'sticky top-0 z-20 border-b border-[#e7d6c6] bg-[#f5e9dc]/95 backdrop-blur',
-        className,
-      )}
-    >
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-2 md:px-8">
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(prev => !prev)}
-          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#6b625a]"
-        >
-          <Menu className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
-            {isCollapsed ? 'Show journey' : 'Hide journey'}
-          </span>
-          <span className="inline sm:hidden">Journey</span>
-        </button>
-        {!isCollapsed ? (
-          <div className="flex flex-1 items-center justify-center gap-4 text-[11px] font-medium text-[#6b625a]">
-            <div className="hidden items-center gap-1 md:flex">
-              <span className="h-1 w-1 rounded-full bg-[#6b625a]" />
-              <span>{currentLabel}</span>
-            </div>
-            <div className="hidden h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#e7d6c6] to-transparent md:block" />
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#fff7ee] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                Cart {totalQuantity > 0 ? `• ${totalQuantity} units` : 'ready'}
-              </span>
+    <CartContext.Provider value={ctxValue}>
+      <div className="min-h-screen bg-[#FFF8F0] text-slate-900 font-inter">
+        <Header cartCount={cartCount} onOpenCart={() => setCartOpen(true)} />
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <RouteTransitions onCustomize={openDesignerForProduct} />
+        </main>
+        <footer className="border-t border-amber-200 mt-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-600">
+            <p>
+              © {new Date().getFullYear()} Nishant Waters. Crafted with mock data only, no live backend.
+            </p>
+            <div className="flex gap-4">
+              <Link to="/about" className="hover:text-[#D9822B]">
+                About
+              </Link>
+              <Link to="/contact" className="hover:text-[#D9822B]">
+                Contact
+              </Link>
             </div>
           </div>
-        ) : null}
-        <div className="flex items-center gap-2">
-          <FloatingCartTrigger />
+        </footer>
+
+        <LabelDesignerDrawer
+          open={designerOpen}
+          onOpenChange={setDesignerOpen}
+          productId={designerProductId}
+          onAddToCart={addItem}
+        />
+        <CartDrawer
+          open={cartOpen}
+          onOpenChange={setCartOpen}
+          items={items}
+          updateQuantity={updateQuantity}
+          removeItem={removeItem}
+          clearCart={clearCart}
+        />
+        <Toaster
+          richColors
+          position="top-right"
+          toastOptions={{
+            style: {
+              fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            },
+          }}
+        />
+      </div>
+    </CartContext.Provider>
+  );
+};
+
+const RouteTransitions: React.FC<{ onCustomize: (id: string) => void }> = ({
+  onCustomize,
+}) => {
+  return (
+    <AnimatePresence mode="wait">
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <PageWrapper>
+              <HomePage onCustomize={onCustomize} />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/shop"
+          element={
+            <PageWrapper>
+              <ShopPage onCustomize={onCustomize} />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/product/:id"
+          element={
+            <PageWrapper>
+              <ProductPage onCustomize={onCustomize} />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <PageWrapper>
+              <AboutPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <PageWrapper>
+              <ContactPage />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <PageWrapper>
+              <HomePage onCustomize={onCustomize} />
+            </PageWrapper>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
+const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.25, ease: "easeOut" }}
+    className="space-y-8"
+  >
+    {children}
+  </motion.div>
+);
+
+// HOME PAGE
+const HomePage: React.FC<{ onCustomize: (id: string) => void }> = ({
+  onCustomize,
+}) => {
+  const navigate = useNavigate();
+  const featured = products.slice(0, 3);
+  return (
+    <>
+      <section className="grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-8 items-center">
+        <div className="space-y-4">
+          <p className="text-[11px] tracking-[0.18em] uppercase text-amber-700">
+            bespoke bottles • soft rituals
+          </p>
+          <h1 className="font-playfair text-4xl sm:text-5xl text-[#1B3A2D] leading-tight">
+            Hydrate Your Style.
+          </h1>
+          <p className="text-sm sm:text-base text-slate-700 max-w-xl">
+            Custom-labeled water bottles that move with you—from studio mornings to golden-hour picnics. Design a label that feels like a quiet love note.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              onClick={() => navigate("/shop")}
+              className="inline-flex items-center justify-center rounded-full bg-[#1B3A2D] px-5 py-2.5 text-sm font-medium text-[#FFF8F0] shadow-sm hover:bg-[#15402F] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-[#FFF8F0]"
+            >
+              Shop now
+            </motion.button>
+            <button
+              type="button"
+              onClick={() => onCustomize(featured[0].id)}
+              className="inline-flex items-center justify-center rounded-full border border-amber-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-[#FFF8F0]"
+            >
+              Start with a label
+            </button>
+          </div>
+        </div>
+        <div className="relative h-72 sm:h-80 md:h-96">
+          <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-b from-[#FFE3C4] to-[#F9CFA9] shadow-xl overflow-hidden">
+            <img
+              src={featured[0].images[0]}
+              alt={featured[0].name}
+              className="h-full w-full object-cover mix-blend-multiply"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+          </div>
+          <div className="absolute -bottom-4 -left-4 bg-white/90 backdrop-blur rounded-2xl border border-amber-100 shadow-lg px-3 py-2 text-xs max-w-[60%]">
+            <p className="font-playfair text-[#1B3A2D]">
+              Labels as keepsakes.
+            </p>
+            <p className="text-slate-700">
+              Add dates, vows, mantras, and little reminders to sip slowly.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="font-playfair text-xl text-[#1B3A2D]">Featured bottles</h2>
+        <div className="grid md:grid-cols-3 gap-5">
+          {featured.map((p, idx) => (
+            <motion.article
+              key={p.id}
+              whileHover={{ y: -4 }}
+              className={`relative rounded-3xl overflow-hidden shadow-md border border-amber-100 bg-white ${
+                idx === 1 ? "md:translate-y-6" : idx === 2 ? "md:-translate-y-4" : ""
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onCustomize(p.id)}
+                className="absolute top-3 right-3 z-10 rounded-full bg-white/90 text-[10px] px-2 py-1 border border-amber-200 shadow-sm hover:bg-amber-50"
+              >
+                Customize
+              </button>
+              <img
+                src={p.images[0]}
+                alt={p.name}
+                className="h-40 w-full object-cover"
+              />
+              <div className="px-3 py-3 space-y-1">
+                <h3 className="font-playfair text-sm text-[#1B3A2D] truncate">
+                  {p.name}
+                </h3>
+                <p className="text-[11px] text-slate-600 line-clamp-2">
+                  {p.description}
+                </p>
+                <p className="text-sm font-medium text-[#D9822B]">
+                  {formatMoney(p.price)}
+                </p>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+};
+
+// SHOP PAGE
+const ShopPage: React.FC<{ onCustomize: (id: string) => void }> = ({
+  onCustomize,
+}) => {
+  const navigate = useNavigate();
+  return (
+    <section className="space-y-4">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h2 className="font-playfair text-2xl text-[#1B3A2D]">Shop bottles</h2>
+          <p className="text-sm text-slate-700">
+            Asymmetric grid of tactile silhouettes. Tap a bottle to learn more.
+          </p>
         </div>
       </div>
-    </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[220px]">
+        {products.map((p, idx) => (
+          <motion.button
+            key={p.id}
+            whileHover={{ y: -6, scale: 1.01 }}
+            className={`group relative text-left rounded-[1.75rem] overflow-hidden shadow-md border border-amber-100 bg-white flex flex-col ${
+              idx % 3 === 1 ? "row-span-2" : ""
+            }`}
+            type="button"
+            onClick={() => navigate(`/product/${p.id}`)}
+          >
+            <div className="relative flex-1">
+              <img
+                src={p.images[0]}
+                alt={p.name}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+              <div className="absolute bottom-3 left-3 right-3 text-white">
+                <h3 className="font-playfair text-sm mb-1 line-clamp-1">
+                  {p.name}
+                </h3>
+                <p className="text-[11px] text-amber-100 line-clamp-2">
+                  {p.description}
+                </p>
+              </div>
+            </div>
+            <div className="px-3 py-2 flex items-center justify-between text-xs">
+              <span className="font-medium text-[#D9822B]">
+                {formatMoney(p.price)}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCustomize(p.id);
+                }}
+                className="rounded-full border border-amber-300 bg-white px-3 py-1 text-[11px] text-slate-800 hover:bg-amber-50"
+              >
+                Quick label
+              </button>
+            </div>
+          </motion.button>
+        ))}
+      </div>
+    </section>
   );
-}
+};
 
-export function FloatingCartTrigger({ className }: FloatingCartTriggerProps) {
-  const { openCart, getTotalQuantity } = useCart();
-  const quantity = getTotalQuantity();
-  const showBadge = quantity > 0;
+// PRODUCT PAGE
+const ProductPage: React.FC<{ onCustomize: (id: string) => void }> = ({
+  onCustomize,
+}) => {
+  const { id } = useParams();
+  const product = products.find((p) => p.id === id) || products[0];
+  const { addItem } = useCart();
 
   return (
-    <button
-      type="button"
-      onClick={() => openCart()}
-      className={cn(
-        'relative flex h-9 w-9 items-center justify-center rounded-full border border-[#e7d6c6] bg-[#fff7ee] text-[#333333] shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md',
-        className,
-      )}
-    >
-      <ShoppingBag className="h-4.5 w-4.5" />
-      {showBadge ? (
-        <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#007a8a] px-1 text-[10px] font-semibold text-white">
-          {quantity}
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-export function useGlobalSearchHotkeys(onToggle: () => void) {
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const metaPressed = isMac ? event.metaKey : event.ctrlKey;
-      if (metaPressed && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        onToggle();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => {
-      window.removeEventListener('keydown', handler);
-    };
-  }, [onToggle]);
-}
-
-export function AppShell({ initialConfig }: AppShellProps) {
-  const location = useLocation();
-  const config = useAppConfig();
-  const [searchState, setSearchState] = useState<GlobalSearchState>({
-    query: '',
-    isOpen: false,
-    source: 'global',
-  });
-  const [productModalState, setProductModalState] = useState<{
-    productId?: ID;
-    open: boolean;
-  }>({
-    productId: undefined,
-    open: false,
-  });
-
-  const effectiveConfig = useMemo<NishantWatersAppConfig>(() => {
-    return {
-      ...(defaultAppConfig ?? {}),
-      ...(config ?? {}),
-      ...(initialConfig ?? {}),
-    };
-  }, [config, initialConfig]);
-
-  useGlobalSearchHotkeys(() => {
-    setSearchState(prev => ({
-      ...prev,
-      isOpen: !prev.isOpen,
-    }));
-  });
-
-  const handleOpenProductFromAnywhere = (productId: ID) => {
-    setProductModalState({
-      productId,
-      open: true,
-    });
-  };
-
-  const handleCloseProductModal = () => {
-    setProductModalState(prev => ({
-      ...prev,
-      open: false,
-    }));
-  };
-
-  const showHeader = !location.pathname.startsWith('/checkout');
-  const showFooter = true;
-
-  return (
-    <div
-      className="flex min-h-screen flex-col bg-[#f5e9dc] text-[#333333]"
-      style={{
-        fontFamily: 'Lora, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      {showHeader ? (
-        <Header className="z-30" showSearch />
-      ) : null}
-      <AppLayoutContextBar />
-      <main className="flex-1">
-        <RouteTransitionWrapper>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/shop" element={<ShopPage />} />
-            <Route path="/product/:slug" element={<ProductPage />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/design" element={<DesignPage initialState={mockData?.labelDesignerInitialState} />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-          </Routes>
-        </RouteTransitionWrapper>
-      </main>
-      {showFooter ? <Footer showNewsletter showSurfaceRibbons /> : null}
-      <CartDrawer triggerVariant="icon" showTrigger={false} />
-      <ProductDetailModal
-        productId={productModalState.productId}
-        open={productModalState.open}
-        onOpenChange={open =>
-          setProductModalState(prev => ({
-            ...prev,
-            open,
-          }))
-        }
-        onClose={handleCloseProductModal}
-        enableDesignCta
-      />
-      <GlobalQuickSearch
-        query={searchState.query}
-        isOpen={searchState.isOpen}
-        onChangeQuery={value =>
-          setSearchState(prev => ({
-            ...prev,
-            query: value,
-          }))
-        }
-        onClose={() =>
-          setSearchState(prev => ({
-            ...prev,
-            isOpen: false,
-          }))
-        }
-        onSelectResult={() => {
-        }}
-      />
-      <Toaster
-        toastOptions={{
-          style: {
-            background: '#fff7ee',
-            borderRadius: 18,
-            border: '1px solid #e7d6c6',
-            color: '#333333',
-            fontFamily:
-              'DM Sans, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          },
-        }}
-        position="top-right"
-      />
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center pb-4">
-        <div className="pointer-events-auto inline-flex items-center gap-3 rounded-full border border-[#e7d6c6] bg-[#fff7ee]/95 px-3 py-1.5 shadow-lg">
+    <section className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-8 items-start">
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 rounded-3xl overflow-hidden border border-amber-100 shadow-md">
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="h-64 sm:h-80 w-full object-cover"
+            />
+          </div>
+          <div className="space-y-3">
+            {product.images.slice(1).map((src) => (
+              <div
+                key={src}
+                className="rounded-2xl overflow-hidden border border-amber-100 shadow-sm h-28"
+              >
+                <img
+                  src={src}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-amber-700">
+          {product.baseBottleType}
+        </p>
+        <h1 className="font-playfair text-2xl sm:text-3xl text-[#1B3A2D]">
+          {product.name}
+        </h1>
+        <p className="text-sm text-slate-700 max-w-xl">{product.description}</p>
+        <p className="text-lg font-medium text-[#D9822B]">
+          {formatMoney(product.price)}
+        </p>
+        <div className="space-y-2">
+          <p className="text-xs text-slate-700">Sleeve colors</p>
+          <div className="flex gap-2">
+            {product.availableColors.map((c) => (
+              <span
+                key={c}
+                className="h-6 w-6 rounded-full border border-amber-200 shadow-inner"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-3 pt-3">
           <button
             type="button"
-            onClick={() =>
-              setSearchState(prev => ({
-                ...prev,
-                isOpen: true,
-                source: 'global',
-              }))
-            }
-            className="inline-flex items-center gap-1 rounded-full bg-[#f5e9dc] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6b625a]"
+            onClick={() => addItem({ productId: product.id })}
+            className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2.5 text-sm font-medium text-slate-900 border border-amber-300 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-[#FFF8F0]"
           >
-            <Search className="h-3 w-3" />
-            <span>Search Studio</span>
+            Add without label
           </button>
-          <FloatingCartTrigger />
-          <KeyboardHint />
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            type="button"
+            onClick={() => onCustomize(product.id)}
+            className="inline-flex items-center justify-center rounded-full bg-[#1B3A2D] px-5 py-2.5 text-sm font-medium text-[#FFF8F0] shadow-sm hover:bg-[#15402F] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-[#FFF8F0]"
+          >
+            Customize your label
+          </motion.button>
         </div>
       </div>
-      <style>
-        {`
-          :root {
-            --nw-bg: ${effectiveConfig?.theme?.background ?? '#f5e9dc'};
-            --nw-surface: ${effectiveConfig?.theme?.surface ?? '#fff7ee'};
-            --nw-border: ${effectiveConfig?.theme?.border ?? '#e7d6c6'};
-            --nw-text: ${effectiveConfig?.theme?.textPrimary ?? '#333333'};
-            --nw-muted: ${effectiveConfig?.theme?.textMuted ?? '#6b625a'};
-            --nw-accent: ${effectiveConfig?.theme?.accent ?? '#007a8a'};
-            --nw-radius-lg: ${(effectiveConfig?.theme?.radiusLg ?? 18).toString()}px;
-          }
-          body {
-            background-color: var(--nw-bg);
-            color: var(--nw-text);
-          }
-        `}
-      </style>
-    </div>
+    </section>
   );
-}
+};
 
-export function KeyboardHint() {
-  const [isMac, setIsMac] = useState<boolean>(false);
+// ABOUT PAGE
+const AboutPage: React.FC = () => {
+  return (
+    <section className="space-y-6">
+      <div className="relative h-64 sm:h-80 rounded-[2.5rem] overflow-hidden shadow-xl border border-amber-100">
+        <img
+          src={aboutEditorial.heroImage}
+          alt="Nishant Waters studio"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className="absolute bottom-4 left-5 right-5 text-white max-w-md">
+          <h1 className="font-playfair text-2xl mb-1">The ritual of refill.</h1>
+          <p className="text-xs text-amber-100">
+            Every bottle is a small altar to the moments you choose yourself.
+          </p>
+        </div>
+      </div>
+      <div className="grid md:grid-cols-3 gap-6">
+        {aboutEditorial.sections.map((s) => (
+          <article
+            key={s.title}
+            className="rounded-3xl bg-white border border-amber-100 shadow-sm px-4 py-4 flex flex-col gap-2"
+          >
+            <h2 className="font-playfair text-base text-[#1B3A2D]">
+              {s.title}
+            </h2>
+            <p className="text-sm text-slate-700">{s.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+};
 
-  useEffect(() => {
-    const platform = navigator.platform.toUpperCase();
-    setIsMac(platform.indexOf('MAC') >= 0);
-  }, []);
+// CONTACT PAGE
+const ContactPage: React.FC = () => {
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Name is required.";
+    if (!form.message.trim()) e.message = "Share a note or question.";
+    if (!form.email.trim() || !emailRegex.test(form.email)) {
+      e.email = "Enter a valid email.";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) {
+      toast.error("Please fix contact details.");
+      return;
+    }
+    const saved = saveUserMessage(form);
+    toast.success("Message sent (mock).", {
+      description: "We log it in memory only—no backend yet.",
+    });
+    console.log("Mock message stored", saved);
+    setForm({ name: "", email: "", message: "" });
+    setErrors({});
+  };
 
   return (
-    <div className="hidden items-center gap-1 rounded-full border border-[#e7d6c6] px-2 py-0.5 text-[10px] font-medium text-[#6b625a] md:flex">
-      <span className="rounded-md bg-[#f5e9dc] px-1.5 py-0.5">
-        {isMac ? '⌘' : 'Ctrl'}
-      </span>
-      <span className="rounded-md bg-[#f5e9dc] px-1.5 py-0.5">K</span>
-      <span className="ml-1 opacity-80">Search Studio</span>
-    </div>
+    <section className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-8 items-start">
+      <form onSubmit={onSubmit} className="space-y-3 rounded-3xl bg-white border border-amber-100 shadow-sm px-4 py-4">
+        <h1 className="font-playfair text-xl text-[#1B3A2D] mb-1">Say hello.</h1>
+        <p className="text-sm text-slate-700 mb-2">{contactContent.intro}</p>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-700">Name</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className={`w-full rounded-lg border px-2.5 py-1.5 text-sm bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF8F0] ${
+              errors.name ? "border-red-400" : "border-amber-200 focus:border-[#FF6B61]"
+            }`}
+          />
+          {errors.name && (
+            <p className="text-[11px] text-red-500">{errors.name}</p>
+          )}
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-700">Email</label>
+          <input
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className={`w-full rounded-lg border px-2.5 py-1.5 text-sm bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF8F0] ${
+              errors.email ? "border-red-400" : "border-amber-200 focus:border-[#FF6B61]"
+            }`}
+          />
+          {errors.email && (
+            <p className="text-[11px] text-red-500">{errors.email}</p>
+          )}
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-700">Message</label>
+          <textarea
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
+            rows={4}
+            className={`w-full rounded-lg border px-2.5 py-1.5 text-sm bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF8F0] ${
+              errors.message
+                ? "border-red-400"
+                : "border-amber-200 focus:border-[#FF6B61]"
+            }`}
+          />
+          {errors.message && (
+            <p className="text-[11px] text-red-500">{errors.message}</p>
+          )}
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.96 }}
+          type="submit"
+          className="mt-1 inline-flex items-center justify-center rounded-full bg-[#1B3A2D] px-5 py-2 text-sm font-medium text-[#FFF8F0] shadow-sm hover:bg-[#15402F] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#FF6B61] focus-visible:ring-offset-[#FFF8F0]"
+        >
+          Send message
+        </motion.button>
+      </form>
+      <div className="rounded-3xl overflow-hidden border border-amber-100 shadow-md h-64 sm:h-80 bg-amber-50">
+        <iframe
+          title="Nishant Waters map"
+          src={contactContent.mapEmbedUrl}
+          className="w-full h-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+    </section>
   );
-}
+};
 
-export function App() {
-  return (
-    <React.StrictMode>
-      <HashRouter>
-        <CartProvider>
-          <AppShell />
-        </CartProvider>
-      </HashRouter>
-    </React.StrictMode>
-  );
-}
+const App: React.FC = () => (
+  <BrowserRouter>
+    <AppShell />
+  </BrowserRouter>
+);
 
 export default App;
