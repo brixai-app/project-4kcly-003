@@ -1,43 +1,31 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-interface DividerProps {
-  label?: string;
+export interface DividerProps {
   className?: string;
+  label?: string;
 }
 
 /**
- * Editorial divider for separating sections and drawer content.
- * Uses soft taupe accents from the Nishant Waters design system.
+ * Textured divider inspired by warm sand / olive tones.
+ * Uses layered gradients + subtle noise-like effect via box-shadow.
  */
-export const Divider: React.FC<DividerProps> = ({ label, className }) => {
-  if (!label) {
-    return (
-      <hr
-        className={cn(
-          "my-8 border-0 h-px bg-gradient-to-r from-transparent via-[#A89F91]/50 to-transparent",
-          className
-        )}
-        aria-hidden="true"
-      />
-    );
-  }
-
+export const Divider: React.FC<DividerProps> = ({ className, label }) => {
   return (
-    <div
-      className={cn(
-        "my-10 flex items-center text-sm tracking-wide uppercase text-[#A89F91]",
-        className
+    <div className={cn("flex items-center gap-3", className)} aria-hidden={!label}>
+      <span
+        className={"flex-1 h-px bg-gradient-to-r from-[rgba(160,82,45,0.15)] via-[rgba(112,130,56,0.25)] to-[rgba(244,225,210,0.4)] shadow-[0_0_0_0.5px_rgba(0,0,0,0.02)] rounded-full"}
+      />
+      {label && (
+        <span className="text-xs tracking-[0.14em] uppercase text-[color:var(--nw-ink-muted)]">
+          {label}
+        </span>
       )}
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label={label}
-    >
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#A89F91]/40 to-transparent" />
-      <span className="mx-4 font-[\"Playfair Display\",_serif] text-[0.75rem] tracking-[0.2em]">
-        {label}
-      </span>
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#A89F91]/40 to-transparent" />
+      {label && (
+        <span
+          className={"flex-1 h-px bg-gradient-to-l from-[rgba(160,82,45,0.15)] via-[rgba(112,130,56,0.25)] to-[rgba(244,225,210,0.4)] shadow-[0_0_0_0.5px_rgba(0,0,0,0.02)] rounded-full"}
+        />
+      )}
     </div>
   );
 };

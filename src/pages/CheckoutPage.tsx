@@ -1,93 +1,166 @@
-import React, { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useCartStore } from "../store/cartStore";
-import { useOrderStore } from "../store/orderStore";
-import { CheckoutForm } from "../components/checkout/CheckoutForm";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { PageTransition } from "../components/layout/PageTransition";
+import { Container } from "../components/layout/Container";
+import { ShippingForm } from "../components/checkout/ShippingForm";
+import { PaymentForm } from "../components/checkout/PaymentForm";
 import { OrderSummaryPanel } from "../components/checkout/OrderSummaryPanel";
-import { Button } from "../components/ui/Button";
+import { useCartStore } from "../state/cartStore";
+import { useOrderStore } from "../state/orderStore";
+import { useAuthStore } from "../state/authStore";
+import { tokens } from "../theme/tokens";
+
+// Simple mock RequireAuth wrapper inside page (no HOC file here)
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const items = useCartStore((s) => s.items);
-  const clearCart = useCartStore((s) => s.clear);
+  const user = useAuthStore((s) => s.user);
+  const cartItems = useCartStore((s) => s.items);
+  const clearCart = useCartStore((s) => s.clearCart);
   const createOrder = useOrderStore((s) => s.createOrder);
 
-  useEffect(() => {
-    if (items.length === 0) {
-      // If cart empty, keep user here but show fallback instead of redirect
-    }
-  }, [items.length]);
+  const [shipping, setShipping] = useState({
+    name: "",
+    address: "",
+    email: "",
+  });
+  const [payment, setPayment] = useState({
+    cardName: "",
+    cardNumber: "",
+    expiry: "",
+    cvv: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handlePlaceOrder = async (values: {
-    name: string;
-    email: string;
-    address: string;
-    phone: string;
-  }) => {
-    const order = createOrder(values);
-    clearCart();
-    navigate(`/order-confirmation?id=${order.id}`);
+  if (!user || !user.isLoggedIn) {
+    return (
+      <PageTransition>
+        <Container className="py-20">
+          <div className="max-w-md rounded-[12px] bg-[color:var(--nw-panel)] p-8 text-[color:var(--nw-ink)] shadow">
+            <h1
+              className="font-heading text-2xl"
+              style={{ fontFamily: tokens.fonts.heading }}
+            >
+              Sign in to continue
+            </h1>
+            <p
+              className="mt-3 text-sm text-[color:var(--nw-ink-soft)]"
+              style={{ fontFamily: tokens.fonts.body }}
+            >
+              Checkout is part of the mock experience and requires a mock account so
+              we can attribute orders to a user profile.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/auth?redirect=/checkout")}
+              className="mt-5 inline-flex w-full justify-center rounded-[999px] bg-[color:var(--nw-accent)] px-4 py-2 text-sm font-semibold text-[color:var(--nw-bg)] shadow-sm hover:bg-[color:var(--nw-accent-strong)]"
+            >
+              Go to login / signup
+            </button>
+          </div>
+        </Container>
+      </PageTransition>
+    );
+  }
+
+  const handleSubmit = () => {
+    if (!shipping.name || !shipping.address || !shipping.email) {
+      toast.error("Please complete the shipping details.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(shipping.email)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+
+    if (!payment.cardName || !payment.cardNumber || !payment.expiry || !payment.cvv) {
+      toast.error("Please fill in all payment fields.");
+      return;
+    }
+
+    if (!/^\d{16}$/.test(payment.cardNumber.replace(/\s+/g, ""))) {
+      toast.error("Card number should be 16 digits (mock only).");
+      return;
+    }
+
+    if (!/^\d{3,4}$/.test(payment.cvv)) {
+      toast.error("Enter a valid CVV (mock only).");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    setTimeout(() => {
+      const total = cartItems.reduce(
+        (sum, item) => sum + item.unitPrice * item.quantity,
+        0
+      );
+
+      const order = createOrder({
+        userId: user.id,
+        items: cartItems,
+        totalPrice: total,
+        shippingAddress: shipping.address,
+        paymentStatus: "paid",
+        email: shipping.email,
+        name: shipping.name,
+      });
+
+      clearCart();
+      setSubmitting(false);
+      toast.success("Mock order placed successfully.");
+      navigate("/checkout/confirmation", { state: { orderId: order.id } });
+    }, 900);
   };
 
-  const hasItems = items.length > 0;
-
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#2B2B2B] px-6 sm:px-10 lg:px-16 xl:px-24 py-12">
-      <header className="mb-10 flex items-end justify-between gap-4">
-        <div>
-          <p className="tracking-[0.22em] text-xs uppercase text-[#A89F91]">
-            Final details
-          </p>
-          <h1 className="font-['Playfair_Display'] text-3xl">Checkout</h1>
-        </div>
-        <p className="text-xs text-[#6A6A6A] max-w-xs text-right">
-          We simulate orders using browser storage only. No payment is processed
-          and no information leaves your device.
-        </p>
-      </header>
+    <PageTransition>
+      <main className="min-h-screen bg-[color:var(--nw-bg)] pb-16 pt-8 md:pt-10">
+        <Container className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr),minmax(0,0.9fr)]">
+          <section className="space-y-6">
+            <header>
+              <h1
+                className="font-heading text-2xl text-[color:var(--nw-ink)] sm:text-3xl"
+                style={{ fontFamily: tokens.fonts.heading }}
+              >
+                Checkout
+              </h1>
+              <p
+                className="mt-2 text-sm text-[color:var(--nw-ink-soft)]"
+                style={{ fontFamily: tokens.fonts.body }}
+              >
+                All details here remain in your browser only. This is a fully mocked
+                flow built on top of mock cart items and a mock order store.
+              </p>
+            </header>
 
-      {!hasItems ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="border border-dashed border-[#D5CEC2] rounded-3xl bg-white/50 py-16 flex flex-col items-center justify-center text-center px-6"
-        >
-          <p className="font-['Playfair_Display'] text-xl mb-2">
-            Your cart is empty.
-          </p>
-          <p className="text-sm text-[#555] max-w-md mb-4">
-            Add at least one custom bottle to continue. You can always refine
-            label details on the product pages.
-          </p>
-          <Button
-            asChild
-            className="bg-[#004D40] text-[#FAF9F6] hover:bg-[#026457] rounded-full px-6 py-3 text-sm"
-          >
-            <Link to="/shop">Return to shop</Link>
-          </Button>
-        </motion.div>
-      ) : (
-        <div className="grid lg:grid-cols-[minmax(0,1.3fr),minmax(0,1fr)] gap-10 items-start">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <CheckoutForm onSubmit={handlePlaceOrder} />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="lg:sticky lg:top-24"
-          >
-            <OrderSummaryPanel />
-          </motion.div>
-        </div>
-      )}
-    </div>
+            <div className="space-y-5">
+              <ShippingForm value={shipping} onChange={setShipping} />
+              <PaymentForm value={payment} onChange={setPayment} />
+            </div>
+          </section>
+
+          <aside className="space-y-4">
+            <OrderSummaryPanel
+              submitting={submitting}
+              onSubmit={handleSubmit}
+            />
+            <p className="text-[10px] text-[color:var(--nw-ink-soft)]">
+              This is a no-risk environment. Card details are validated only on
+              pattern and never sent to any server.
+            </p>
+          </aside>
+        </Container>
+      </main>
+    </PageTransition>
   );
 };
 

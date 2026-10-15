@@ -1,43 +1,78 @@
 import React from "react";
+import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
-import AppRoutes from "./routes";
-import { CartProvider } from "./store/cartStore";
-import { OrderProvider } from "./store/orderStore";
-import { UiStoreProvider } from "./store/uiStore";
-import { MotionConfig } from "./components/ui/Motion";
-import "./index.css";
+import { AnimatePresence } from "framer-motion";
 
-const App: React.FC = () => {
+import { AuthProvider } from "./state/authStore";
+import { CartProvider } from "./state/cartStore";
+import { OrderProvider } from "./state/orderStore";
+
+import { Header } from "./components/layout/Header";
+import { Footer } from "./components/layout/Footer";
+import { CartDrawer } from "./components/cart/CartDrawer";
+import { AppRoutes } from "./router/routes";
+import { PageTransition } from "./components/layout/PageTransition";
+
+// NOTE: This app is fully frontend-only and relies on centralized mock data
+// defined in src/mock.ts / src/mockData.ts for products, users, and orders.
+// There is NO real backend or network I/O; all state is stored in-memory
+// and persisted via localStorage for the mock auth and cart flows.
+
+const AppShell: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-sand-soft text-stone-900 flex flex-col">
+      {/* Skip link for a11y */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-cream focus:text-stone-900 focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
+      <Header />
+      <CartDrawer />
+
+      <main
+        id="main-content"
+        className="flex-1 pt-16" // account for fixed header if any
+        aria-label="Main content"
+      >
+        <PageTransition>
+          <AppRoutes />
+        </PageTransition>
+      </main>
+
+      <Footer />
+
+      <Toaster
+        position="bottom-center"
+        theme="light"
+        toastOptions={{
+          duration: 3000,
+          className:
+            "rounded-xl bg-cream/95 text-stone-900 shadow-lg border border-sand-soft font-sans text-sm",
+        }}
+      />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  // Global font classes are attached via index.css with Playfair Display & Inter
+  // Here we just ensure providers wrap the entire visual tree.
   return (
     <React.StrictMode>
-      {/* Global motion configuration for framer-motion wrappers */}
-      <MotionConfig>
-        {/* Global UI providers for cart, orders, and UI drawers. All data is stored in browser only. */}
-        <UiStoreProvider>
+      <BrowserRouter>
+        <AuthProvider>
           <CartProvider>
             <OrderProvider>
-              {/* Router + layout tree */}
-              <AppRoutes />
-              {/* Sonner toast portal */}
-              <Toaster
-                position="top-center"
-                richColors
-                theme="light"
-                toastOptions={{
-                  style: {
-                    background: "#FAF9F6",
-                    color: "#2B2B2B",
-                    borderRadius: 9999,
-                    border: "1px solid #DDD6C5",
-                    fontFamily:
-                      "'Lora', ui-serif, Georgia, 'Times New Roman', serif",
-                  },
-                }}
-              />
+              <AnimatePresence mode="wait">
+                <AppShell />
+              </AnimatePresence>
             </OrderProvider>
           </CartProvider>
-        </UiStoreProvider>
-      </MotionConfig>
+        </AuthProvider>
+      </BrowserRouter>
     </React.StrictMode>
   );
 };

@@ -1,75 +1,81 @@
 import React from "react";
-import { motion } from "framer-motion";
-import type { CartItem } from "@/types";
-import { formatPrice, calculateCartSubtotal } from "@/lib/pricing";
-import { Button } from "@/components/ui/Button";
+import { Price } from "../ui/Price";
+import { MotionButton } from "../ui/MotionButton";
+import { useCartStore } from "@/state/cartStore";
+import { useNavigate } from "react-router-dom";
+import { SHIPPING_RATE_FLAT, TAX_RATE } from "@/mock";
 
 interface CartSummaryProps {
-  items: CartItem[];
-  onCheckout: () => void;
+  onCheckoutClick?: () => void;
+  compact?: boolean;
 }
 
-const CartSummary: React.FC<CartSummaryProps> = ({ items, onCheckout }) => {
-  const subtotal = calculateCartSubtotal(items);
-  const shippingEstimate = items.length > 0 ? 12 : 0; // flat mock shipping
-  const total = subtotal + shippingEstimate;
+export const CartSummary: React.FC<CartSummaryProps> = ({
+  onCheckoutClick,
+  compact,
+}) => {
+  const navigate = useNavigate();
+  const { items } = useCartStore();
 
-  const disabled = items.length === 0;
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const shipping = items.length > 0 ? SHIPPING_RATE_FLAT : 0;
+  const tax = subtotal * TAX_RATE;
+  const total = subtotal + shipping + tax;
+
+  const handleCheckout = () => {
+    if (items.length === 0) return;
+    if (onCheckoutClick) onCheckoutClick();
+    navigate("/checkout");
+  };
 
   return (
-    <motion.aside
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      className="space-y-4 rounded-xl border border-[#A89F91]/50 bg-[#FAF9F6] p-4 shadow-sm"
+    <section
       aria-label="Cart summary"
-    >
-      <div>
-        <h2 className="text-xs font-semibold tracking-[0.18em] text-[#2B2B2B]/70 uppercase">
-          Summary
-        </h2>
-        <p className="mt-1 text-[11px] text-[#2B2B2B]/75">
-          All pricing is simulated with mock data for this preview experience.
-        </p>
+      className={`rounded-xl border border-[rgba(160,82,45,0.18)] bg-[#FFF8F0]/90 p-4 shadow-sm backdrop-blur-sm ${
+        compact ? "space-y-3" : "space-y-4"
+      }`}
+   >
+      <div className="flex items-center justify-between text-sm text-[rgba(40,30,20,0.8)]">
+        <span>Subtotal</span>
+        <Price value={subtotal} />
       </div>
-
-      <dl className="space-y-2 text-xs text-[#2B2B2B]/80">
-        <div className="flex items-center justify-between">
-          <dt>Subtotal</dt>
-          <dd className="font-medium text-[#2B2B2B]">{formatPrice(subtotal)}</dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt>Estimated shipping</dt>
-          <dd>
-            {items.length > 0 ? (
-              <span className="font-medium text-[#2B2B2B]">{formatPrice(shippingEstimate)}</span>
-            ) : (
-              <span className="text-[#2B2B2B]/60">—</span>
-            )}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between border-t border-dashed border-[#A89F91]/60 pt-2 text-[13px]">
-          <dt className="font-semibold tracking-wide text-[#2B2B2B]">Total</dt>
-          <dd className="font-semibold text-[#2B2B2B]">{formatPrice(total)}</dd>
-        </div>
-      </dl>
-
-      <div className="pt-1">
-        <Button
-          type="button"
-          size="lg"
-          className="w-full justify-center"
-          disabled={disabled}
-          onClick={onCheckout}
-        >
-          Proceed to checkout
-        </Button>
-        <p className="mt-2 text-[10px] leading-relaxed text-[#2B2B2B]/70">
-          This is a client-side prototype: no real payment is processed, and orders are stored
-          only in your browser for the duration of your session.
-        </p>
+      <div className="flex items-center justify-between text-sm text-[rgba(40,30,20,0.8)]">
+        <span>Estimated shipping</span>
+        {shipping === 0 ? (
+          <span className="text-xs uppercase tracking-wide text-[rgba(112,130,56,0.9)]">
+            Free
+          </span>
+        ) : (
+          <Price value={shipping} />
+        )}
       </div>
-    </motion.aside>
+      <div className="flex items-center justify-between text-sm text-[rgba(40,30,20,0.8)]">
+        <span>Estimated tax</span>
+        <Price value={tax} />
+      </div>
+      <div className="h-px bg-gradient-to-r from-[rgba(160,82,45,0.15)] via-[rgba(112,130,56,0.2)] to-[rgba(64,224,208,0.25)]" />
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-[rgba(40,30,20,0.94)]">
+          Total
+        </span>
+        <span className="text-base font-semibold text-[rgba(40,30,20,0.98)]">
+          <Price value={total} />
+        </span>
+      </div>
+      <p className="text-[11px] leading-snug text-[rgba(40,30,20,0.6)]">
+        Taxes and shipping are mock estimates for demo purposes. No real
+        payment is processed.
+      </p>
+      <MotionButton
+        type="button"
+        onClick={handleCheckout}
+        disabled={items.length === 0}
+        className="w-full rounded-xl bg-[#FF6F61] px-4 py-3 text-sm font-medium text-[#FFF8F0] shadow-[0_10px_30px_rgba(255,111,97,0.35)] transition-colors duration-200 hover:bg-[#e66055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#40E0D0] focus-visible:ring-offset-[#FFF8F0] disabled:cursor-not-allowed disabled:bg-[rgba(160,82,45,0.35)] disabled:text-[rgba(255,248,240,0.8)] disabled:shadow-none"
+        aria-label={items.length === 0 ? "Cart is empty" : "Proceed to checkout"}
+      >
+        {items.length === 0 ? "Cart is empty" : "Checkout"}
+      </MotionButton>
+    </section>
   );
 };
 

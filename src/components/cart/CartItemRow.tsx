@@ -1,132 +1,157 @@
 import React from "react";
-import { Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { CartItem, Product } from "@/types";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import type { CartItem } from "@/types";
+import { getProductById } from "@/mock"; // centralized mock data
 import { cn } from "@/lib/utils";
-import { formatPrice } from "@/lib/pricing";
-import { labelDesignOptions, products } from "@/mock";
+import { useCartStore } from "@/state/cartStore";
 
-interface CartItemRowProps {
+export interface CartItemRowProps {
   item: CartItem;
-  onChangeQuantity: (quantity: number) => void;
-  onRemove: () => void;
+  index: number;
 }
 
-export const CartItemRow: React.FC<CartItemRowProps> = ({ item, onChangeQuantity, onRemove }) => {
-  const product: Product | undefined = products.find((p) => p.id === item.productId);
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, index }) => {
+  const { updateQuantity, removeItem } = useCartStore();
+  const product = getProductById(item.productId);
 
   if (!product) return null;
 
-  const maxQty = product.stockQuantity;
-  const canDecrease = item.quantity > 1;
-  const canIncrease = item.quantity < maxQty;
+  const handleQuantityChange = (value: number) => {
+    if (value < 1 || value > 10) {
+      toast.error("Quantity must be between 1 and 10");
+      return;
+    }
+    updateQuantity(item.productId, item.selectedSize, item.selectedColor, value);
+  };
 
-  const font = labelDesignOptions.fonts.find((f) => f.id === item.labelDesign.font);
-  const color = labelDesignOptions.colors.find((c) => c.id === item.labelDesign.color);
-  const icon = labelDesignOptions.icons.find((i) => i.id === item.labelDesign.icon);
+  const handleRemove = () => {
+    removeItem(item.productId, item.selectedSize, item.selectedColor);
+    toast.message("Item removed", {
+      description: `${product.name} was removed from your cart (mock only).`,
+    });
+  };
 
-  const image = product.images[0];
+  const colorChipStyle: React.CSSProperties = {
+    backgroundColor: item.selectedColor,
+  };
+
+  const hasLabel = Boolean(item.customLabelDesign?.elements?.length);
+
+  const linePrice = product.basePrice * item.quantity;
 
   return (
     <motion.li
       layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.2 }}
-      className="flex gap-4 border-b border-[#A89F91]/40 pb-4 pt-3 last:border-b-0 last:pb-0"
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.97 }}
+      transition={{ delay: index * 0.03 }}
+      className="flex gap-3 rounded-2xl border border-sand-200 bg-white/90 p-3 shadow-sm shadow-neutral-900/5"
     >
-      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-[#A89F91]/40 bg-white">
-        {image && (
-          <img
-            src={image.url}
-            alt={image.alt}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+      <div className="relative h-20 w-20 overflow-hidden rounded-xl bg-cream-100">
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          className="h-full w-full object-cover"
+        />
+        {hasLabel && (
+          <span className="absolute inset-x-1 bottom-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cream-50">
+            Custom label
+          </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-between gap-1 text-sm text-[#2B2B2B]">
-        <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-xs font-semibold tracking-[0.18em] text-[#2B2B2B]/70 uppercase">
+            <h3 className="text-sm font-semibold text-neutral-900">
               {product.name}
-            </div>
-            <div className="mt-1 text-[11px] text-[#2B2B2B]/80">
-              {item.selectedSize} • {item.selectedBottleColor}
-            </div>
-            <div className="mt-1 text-[11px] text-[#2B2B2B]/70">
-              <span className="font-semibold">Label:</span>{" "}
-              <span className="italic">{item.labelDesign.text || "Untitled"}</span>
-              {font && <span className="ml-1">· {font.label}</span>}
-              {color && (
-                <span className="ml-1 inline-flex items-center gap-1">
-                  · {color.label}
-                  <span
-                    className="h-2 w-2 rounded-full border border-black/5"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                </span>
-              )}
-              {icon && <span className="ml-1">· {icon.label}</span>}
+            </h3>
+            <p className="mt-0.5 text-[11px] text-neutral-500 line-clamp-2">
+              {product.description}
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-neutral-900">
+            ₹{linePrice.toFixed(0)}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+          <div className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2 py-0.5">
+            <span className="font-medium text-neutral-700">
+              {item.selectedSize}
+            </span>
+            <span className="text-neutral-400">•</span>
+            <span className="flex items-center gap-1">
+              <span
+                className="h-3 w-3 rounded-full border border-sand-300"
+                style={colorChipStyle}
+              />
+              Color
+            </span>
+          </div>
+          {hasLabel && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-terracotta-50 px-2 py-0.5 text-terracotta-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-terracotta-500" />
+              Label saved
+            </span>
+          )}
+        </div>
+
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-neutral-600" htmlFor={`qty-${item.productId}`}>
+              Qty
+            </label>
+            <div className="inline-flex items-center rounded-lg border border-sand-300 bg-cream-50 px-1">
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(item.quantity - 1)}
+                disabled={item.quantity <= 1}
+                className={cn(
+                  "inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-medium text-neutral-700",
+                  "hover:bg-sand-100 disabled:cursor-not-allowed disabled:text-neutral-300",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-500"
+                )}
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <input
+                id={`qty-${item.productId}`}
+                type="number"
+                min={1}
+                max={10}
+                value={item.quantity}
+                onChange={(e) => handleQuantityChange(Number(e.target.value) || 1)}
+                className="h-6 w-9 border-none bg-transparent text-center text-xs text-neutral-800 focus:outline-none"
+                aria-label="Quantity"
+              />
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(item.quantity + 1)}
+                disabled={item.quantity >= 10}
+                className={cn(
+                  "inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-medium text-neutral-700",
+                  "hover:bg-sand-100 disabled:cursor-not-allowed disabled:text-neutral-300",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-500"
+                )}
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={onRemove}
-            className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-transparent text-[#2B2B2B]/60 transition-colors hover:border-[#A89F91]/60 hover:text-[#2B2B2B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF9F6]"
-            aria-label={`Remove ${product.name} from cart`}
+            onClick={handleRemove}
+            className="inline-flex items-center gap-1 rounded-lg bg-coral-50 px-2 py-1 text-[11px] font-medium text-coral-700 shadow-sm transition-colors hover:bg-coral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-400"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Trash2 className="h-3.5 w-3.5" /> Remove
           </button>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center rounded-full border border-[#A89F91]/60 bg-white px-1.5 py-1 text-[11px] text-[#2B2B2B]/80">
-            <span className="sr-only">Quantity</span>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium transition-colors",
-                canDecrease
-                  ? "text-[#2B2B2B] hover:bg-[#FAF9F6]"
-                  : "cursor-not-allowed text-[#A89F91]"
-              )}
-              disabled={!canDecrease}
-              onClick={() => canDecrease && onChangeQuantity(item.quantity - 1)}
-              aria-label="Decrease quantity"
-            >
-              −
-            </button>
-            <span className="mx-2 min-w-[1.5rem] text-center text-xs font-semibold">
-              {item.quantity}
-            </span>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium transition-colors",
-                canIncrease
-                  ? "text-[#2B2B2B] hover:bg-[#FAF9F6]"
-                  : "cursor-not-allowed text-[#A89F91]"
-              )}
-              disabled={!canIncrease}
-              onClick={() => canIncrease && onChangeQuantity(item.quantity + 1)}
-              aria-label="Increase quantity"
-            >
-              +
-            </button>
-          </div>
-
-          <div className="text-right text-xs font-semibold tracking-wide text-[#2B2B2B]">
-            <div>{formatPrice(item.price * item.quantity)}</div>
-            {item.quantity > 1 && (
-              <div className="text-[10px] text-[#2B2B2B]/70">
-                {formatPrice(item.price)} each
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </motion.li>

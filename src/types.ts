@@ -1,120 +1,109 @@
-export type BottleSize = '250ml' | '500ml' | '750ml';
+// Domain types and shared utilities for Nishant Waters
 
-export type BottleColor = 'white' | 'matte-black' | 'transparent';
+export type PaymentStatus = "pending" | "paid" | "failed";
 
-export type LabelFont = 'Playfair Display' | 'Bodoni' | 'Lora';
-
-export type LabelColor = '#004D40' | '#A89F91' | '#2B2B2B' | '#FAF9F6';
-
-export type LabelIcon = 'water-droplet' | 'leaf' | 'wave';
-
-export interface LabelDesign {
-  text: string;
-  font: LabelFont;
-  color: LabelColor;
-  icon: LabelIcon | null;
+export interface LabelTransform {
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+  scale: number; // 0.5-2
+  rotation: number; // degrees
 }
 
-export interface ProductImage {
-  url: string;
+export type LabelElementType = "text" | "image";
+
+export interface BaseLabelElement {
+  id: string;
+  type: LabelElementType;
+  transform: LabelTransform;
+}
+
+export interface TextLabelElement extends BaseLabelElement {
+  type: "text";
+  text: string;
+  fontId: string; // references labelFontOptions
+  color: string; // hex
+  size: number; // px
+}
+
+export interface ImageLabelElement extends BaseLabelElement {
+  type: "image";
+  src: string; // data URL in mock mode
   alt: string;
+  width: number; // px
+  height: number; // px
+}
+
+export type LabelElement = TextLabelElement | ImageLabelElement;
+
+export interface LabelDesign {
+  id: string;
+  name: string;
+  backgroundColor: string;
+  elements: LabelElement[];
 }
 
 export interface Product {
   id: string;
   name: string;
-  basePrice: number;
   description: string;
-  images: ProductImage[];
-  availableSizes: BottleSize[];
-  availableBottleColors: BottleColor[];
-  customizableLabelOptions: {
-    fonts: LabelFont[];
-    colors: LabelColor[];
-    icons: LabelIcon[];
-  };
-  stockQuantity: number;
+  basePrice: number;
+  images: string[];
+  availableSizes: ("500ml" | "750ml" | "1L")[] | string[];
+  availableColors: string[]; // hex
+  customizableLabel: boolean;
 }
 
 export interface CartItem {
-  id: string; // unique cart item id
   productId: string;
-  selectedSize: BottleSize;
-  selectedBottleColor: BottleColor;
-  labelDesign: LabelDesign;
+  selectedSize: string;
+  selectedColor: string; // hex
+  customLabelDesign: LabelDesign | null;
   quantity: number;
-  price: number; // line item price (per unit * quantity)
 }
 
-export interface CustomerInfo {
+export interface User {
+  id: string;
   name: string;
   email: string;
-  address: string;
-  phone: string;
+  isLoggedIn: boolean;
 }
-
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered';
 
 export interface Order {
   id: string;
-  cartItems: CartItem[];
+  userId: string;
+  items: CartItem[];
   totalPrice: number;
-  customerInfo: CustomerInfo;
-  orderStatus: OrderStatus;
-  createdAt: string; // ISO date string
-}
-
-export interface LabelDesignOptions {
-  fonts: LabelFont[];
-  colors: LabelColor[];
-  icons: LabelIcon[];
-}
-
-export interface UserFeedback {
-  id: string;
-  productId: string;
-  userName: string;
-  rating: 1 | 2 | 3 | 4 | 5;
-  comment: string;
+  shippingAddress: string;
+  paymentStatus: PaymentStatus;
   createdAt: string; // ISO
 }
 
-export interface Filters {
-  sizes: BottleSize[];
-  colors: BottleColor[];
-  minPrice?: number;
-  maxPrice?: number;
-}
+// ---------- FORM / VALIDATION UTILITIES ----------
 
 export interface ValidationResult {
   valid: boolean;
-  errors: Record<string, string | undefined>;
+  error?: string;
 }
 
-export interface CheckoutValidationResult extends ValidationResult {
-  errors: {
-    name?: string;
-    email?: string;
-    address?: string;
-    phone?: string;
-  };
+export type FieldErrors<T extends Record<string, any>> = Partial<Record<keyof T, string>>;
+
+export interface AuthCredentials {
+  email: string;
+  name?: string;
+  password: string;
 }
 
-export interface LabelValidationResult extends ValidationResult {
-  errors: {
-    text?: string;
-    font?: string;
-    color?: string;
-    icon?: string;
-  };
+export interface CheckoutFormValues {
+  name: string;
+  email: string;
+  address: string;
+  cardNumber: string;
+  shippingOptionId: string;
 }
 
-export interface CartItemValidationResult extends ValidationResult {
-  errors: {
-    quantity?: string;
-    selectedSize?: string;
-    selectedBottleColor?: string;
-  };
+export interface AsyncState {
+  loading: boolean;
+  error: string | null;
 }
 
-export type KeyHandler = (event: KeyboardEvent) => void;
+export type Nullable<T> = T | null;

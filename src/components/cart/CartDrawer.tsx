@@ -1,149 +1,97 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { CartItemRow } from "./CartItemRow";
+import { X, ShoppingBag } from "lucide-react";
+import { useCartStore } from "@/state/cartStore";
+import CartItemRow from "./CartItemRow";
 import { CartSummary } from "./CartSummary";
-import { useCartStore } from "@/store/cartStore";
-import { useUIStore } from "@/store/uiStore";
-import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { Container } from "../layout/Container";
 
-export const CartDrawer: React.FC = () => {
-  const navigate = useNavigate();
-  const {
-    isCartOpen,
-    closeCart,
-  } = useUIStore();
-  const { items, clearCart } = useCartStore();
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+interface CartDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
-  const hasItems = items.length > 0;
-
-  useEffect(() => {
-    if (isCartOpen && closeButtonRef.current) {
-      closeButtonRef.current.focus();
-    }
-  }, [isCartOpen]);
-
-  const handleCheckout = () => {
-    closeCart();
-    navigate("/checkout");
-  };
-
-  const handleClearCart = () => {
-    if (!hasItems) return;
-    clearCart();
-  };
+export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onOpenChange }) => {
+  const { items } = useCartStore();
 
   return (
-    <Dialog.Root open={isCartOpen} onOpenChange={(open) => !open && closeCart()}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
-        {isCartOpen && (
+        {open && (
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
               <motion.div
-                className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-[rgba(12,8,4,0.32)] backdrop-blur-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18 }}
               />
             </Dialog.Overlay>
 
             <Dialog.Content asChild>
               <motion.aside
-                className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#FAF9F6] shadow-2xl border-l border-[#E0D9CC] flex flex-col"
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 320, damping: 32 }}
+                role="dialog"
                 aria-label="Shopping cart"
+                className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-[#FFF8F0] shadow-[0_0_40px_rgba(40,30,20,0.35)]"
+                initial={{ x: "100%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "100%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 280, damping: 30 }}
               >
-                <header className="flex items-center justify-between px-6 py-4 border-b border-[#E0D9CC] bg-white/70 backdrop-blur">
+                <header className="flex items-center justify-between border-b border-[rgba(160,82,45,0.16)] bg-[rgba(244,225,210,0.9)] px-4 py-3 backdrop-blur">
                   <div className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-[#004D40]" aria-hidden="true" />
-                    <Dialog.Title className="font-playfair text-lg tracking-wide text-[#2B2B2B]">
-                      Your Cart
-                    </Dialog.Title>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#A0522D] text-[#FFF8F0] shadow-sm">
+                      <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <div className="flex flex-col">
+                      <Dialog.Title className="text-sm font-semibold tracking-wide text-[rgba(40,30,20,0.95)]">
+                        Your cart
+                      </Dialog.Title>
+                      <Dialog.Description className="text-xs text-[rgba(40,30,20,0.65)]">
+                        {items.length === 0
+                          ? "You haven't added any bottles yet."
+                          : `${items.length} item${items.length > 1 ? "s" : ""} in cart`}
+                      </Dialog.Description>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {hasItems && (
-                      <button
-                        type="button"
-                        onClick={handleClearCart}
-                        className="inline-flex items-center gap-1 text-xs tracking-wide text-[#A89F91] hover:text-[#2B2B2B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF9F6] rounded-full px-2 py-1 transition-colors"
-                      >
-                        <Trash2 className="h-3 w-3" aria-hidden="true" />
-                        Clear
-                      </button>
-                    )}
-                    <Dialog.Close asChild>
-                      <button
-                        ref={closeButtonRef}
-                        type="button"
-                        className="rounded-full p-1.5 text-[#A89F91] hover:text-[#2B2B2B] hover:bg-[#F3EFE7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF9F6] transition-colors"
-                        aria-label="Close cart"
-                      >
-                        <X className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                    </Dialog.Close>
-                  </div>
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(160,82,45,0.25)] bg-[#FFF8F0] text-[rgba(40,30,20,0.75)] shadow-sm transition-colors duration-150 hover:bg-[rgba(244,225,210,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#40E0D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF8F0]"
+                      aria-label="Close cart"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </Dialog.Close>
                 </header>
 
-                <section
-                  className={cn(
-                    "flex-1 overflow-y-auto px-6 py-4 space-y-4", 
-                    !hasItems && "flex flex-col items-center justify-center text-center"
-                  )}
-                >
-                  {hasItems ? (
-                    items.map((item) => (
-                      <CartItemRow key={`${item.productId}-${item.selectedSize}-${item.selectedBottleColor}-${item.labelDesign.text}`} item={item} />
-                    ))
-                  ) : (
-                    <div className="max-w-xs mx-auto">
-                      <p className="font-playfair text-lg text-[#2B2B2B] mb-2">
-                        Your cart feels a little thirsty.
-                      </p>
-                      <p className="text-sm text-[#5C5548] mb-4">
-                        Explore our bespoke bottles and design a label that speaks your language.
-                      </p>
-                      <Button
-                        variant="primary"
-                        className="w-full"
-                        onClick={() => {
-                          closeCart();
-                          navigate("/shop");
-                        }}
-                      >
-                        Browse the collection
-                      </Button>
-                    </div>
-                  )}
-                </section>
+                <div className="flex-1 overflow-y-auto px-4 py-4">
+                  <Container className="space-y-4">
+                    {items.length === 0 ? (
+                      <div className="mt-8 flex flex-col items-start gap-3 rounded-xl bg-[rgba(244,225,210,0.7)] p-4 text-[rgba(40,30,20,0.85)]">
+                        <p className="font-medium">Your bottle awaits.</p>
+                        <p className="text-sm text-[rgba(40,30,20,0.7)]">
+                          Browse the collection and craft a label that feels like
+                          you. This is a fully mocked cart for demo purposes—no
+                          real purchases are made.
+                        </p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-3" aria-label="Cart items list">
+                        {items.map((item) => (
+                          <li key={item.id}>
+                            <CartItemRow item={item} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Container>
+                </div>
 
-                <footer className="border-t border-[#E0D9CC] bg-white/80 backdrop-blur px-6 py-4">
-                  <CartSummary>
-                    <div className="mt-4 flex flex-col gap-3">
-                      <Button
-                        variant="primary"
-                        className="w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={handleCheckout}
-                        disabled={!hasItems}
-                      >
-                        Proceed to checkout
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={closeCart}
-                        className="w-full text-sm tracking-wide text-[#2B2B2B] underline underline-offset-4 decoration-[#A89F91] hover:text-[#004D40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF9F6] rounded-md py-1"
-                      >
-                        Continue shopping
-                      </button>
-                    </div>
-                  </CartSummary>
+                <footer className="border-t border-[rgba(160,82,45,0.18)] bg-[rgba(255,248,240,0.96)] p-4">
+                  <CartSummary compact onCheckoutClick={() => onOpenChange(false)} />
                 </footer>
               </motion.aside>
             </Dialog.Content>

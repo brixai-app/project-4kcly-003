@@ -1,104 +1,117 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye } from "lucide-react";
-import { Product } from "@/types";
-import { formatPriceFromCents } from "@/lib/pricing";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Product } from "@/types";
+import { formatPrice } from "@/theme/tokens";
 
 interface ProductCardProps {
   product: Product;
+  layoutVariant?: "default" | "tall" | "wide";
 }
 
-const MotionDiv = motion.div;
+export const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  layoutVariant = "default",
+}) => {
+  const navigate = useNavigate();
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const handleClick = () => {
+    navigate(`/product/${product.id}`);
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   const primaryImage = product.images?.[0];
 
-  const basePrice = product.basePrice ?? 0;
+  const heightClass =
+    layoutVariant === "tall"
+      ? "row-span-2 min-h-[320px]"
+      : layoutVariant === "wide"
+      ? "col-span-2 min-h-[260px]"
+      : "min-h-[260px]";
 
   return (
-    <MotionDiv
+    <motion.div
+      layout
       whileHover={{ y: -4 }}
-      transition={{ type: "spring", stiffness: 260, damping: 20 }}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#DDD5C7]/80 bg-white shadow-sm shadow-[#C8C0B3]/40"
+      transition={{ type: "spring", stiffness: 260, damping: 24 }}
+      className={cn(
+        "group flex cursor-pointer flex-col overflow-hidden rounded-[12px] border border-[rgba(160,82,45,0.22)] bg-[#FFF8F0] shadow-[0_12px_30px_rgba(67,40,28,0.08)]",
+        "focus-within:ring-2 focus-within:ring-[#40E0D0]/60",
+        heightClass
+      )}
+      role="button"
+      tabIndex={0}
+      aria-label={`${product.name} – view details`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
     >
-      <Link
-        to={`/product/${product.id}`}
-        className="relative block overflow-hidden"
-        aria-label={`View details for ${product.name}`}
-      >
-        <div className="aspect-[4/5] w-full overflow-hidden bg-[#F2EEE6]">
-          {primaryImage ? (
-            <motion.img
-              src={primaryImage.url}
-              alt={primaryImage.alt || product.name}
-              className="h-full w-full object-cover"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-[#6B6256]">
-              Image coming soon
-            </div>
-          )}
-        </div>
-
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-0",
-            "transition-opacity duration-200 group-hover:opacity-100"
-          )}
-          aria-hidden="true"
-        />
-
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-x-4 bottom-4 flex items-center justify-between text-xs text-[#FAF9F6] opacity-0",
-            "transition-opacity duration-200 group-hover:opacity-100"
-          )}
-        >
-          <span className="font-['Bodoni_Moda'] tracking-[0.18em] uppercase">
-            Quick view
+      {/* Image */}
+      <div className="relative overflow-hidden bg-[#F4E1D2]">
+        {primaryImage ? (
+          <motion.img
+            src={primaryImage}
+            alt={product.name}
+            className="h-56 w-full object-cover transition-[filter] group-hover:brightness-105"
+            initial={{ scale: 1.02 }}
+            whileHover={{ scale: 1.07 }}
+            transition={{ type: "spring", stiffness: 200, damping: 24 }}
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-56 w-full items-center justify-center text-sm text-[#7A5C49]">
+            Preview coming soon
+          </div>
+        )}
+        {product.customizableLabel && (
+          <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-[#40E0D0] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-[#123B35] shadow-sm">
+            Custom label
           </span>
-          <Eye className="h-4 w-4" aria-hidden="true" />
-        </div>
-      </Link>
+        )}
+      </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3">
+      {/* Content */}
+      <div className="flex flex-1 flex-col justify-between px-4 pb-4 pt-3">
         <div className="space-y-1">
-          <h3 className="font-['Playfair_Display'] text-base text-[#2B2B2B]">
-            <Link
-              to={`/product/${product.id}`}
-              className="transition-colors duration-200 hover:text-[#004D40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              {product.name}
-            </Link>
+          <h3 className="font-display text-base text-[#43281C]">
+            {product.name}
           </h3>
-          <p className="line-clamp-2 text-xs leading-relaxed text-[#6B6256]">
+          <p className="line-clamp-2 text-xs text-[#7A5C49]">
             {product.description}
           </p>
         </div>
 
-        <div className="mt-auto flex items-center justify-between pt-1">
+        <div className="mt-3 flex items-end justify-between gap-2">
           <div className="space-y-0.5">
-            <div className="font-['Bodoni_Moda'] text-[11px] uppercase tracking-[0.2em] text-[#6B6256]">
+            <p className="text-xs uppercase tracking-[0.14em] text-[#A0522D]">
               From
-            </div>
-            <div className="text-sm font-semibold text-[#2B2B2B]">
-              {formatPriceFromCents(basePrice)}
-            </div>
+            </p>
+            <p className="font-display text-lg text-[#43281C]">
+              {formatPrice(product.basePrice)}
+            </p>
           </div>
 
-          <Link
-            to={`/product/${product.id}`}
-            className="inline-flex items-center rounded-full border border-[#004D40]/30 bg-[#004D40] px-3 py-1.5 text-xs font-medium text-[#FAF9F6] shadow-sm shadow-[#004D40]/30 transition-colors duration-200 hover:bg-[#02675A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004D40]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-full bg-[#A0522D] px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-[#FFF8F0] shadow-sm outline-none transition-[background-color,box-shadow,transform] hover:scale-[1.04] hover:bg-[#8E4828] hover:shadow-md active:scale-95 focus-visible:bg-[#8E4828] focus-visible:shadow-[0_0_0_2px_rgba(64,224,208,0.65)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick();
+            }}
           >
-            Design yours
-          </Link>
+            Quick view
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </button>
         </div>
       </div>
-    </MotionDiv>
+    </motion.div>
   );
 };
 

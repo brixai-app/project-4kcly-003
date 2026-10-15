@@ -1,217 +1,193 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { featuredProducts } from "../mock";
-import { ProductGallery } from "../components/product/ProductGallery";
-import { SectionHeading } from "../components/ui/SectionHeading";
-import { Button } from "../components/ui/Button";
+import { products } from "../mock";
+import { Container } from "../components/layout/Container";
+import { ProductMasonryGallery } from "../components/product/ProductMasonryGallery";
+import { PageTransition } from "../components/layout/PageTransition";
+import { MotionButton } from "../components/ui/MotionButton";
+import { tokens } from "../theme/tokens";
 
-const heroVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
-};
-
-const staggerContainer = {
-  visible: {
-    transition: {
-      staggerChildren: 0.15,
-    },
-  },
-};
+const heroImage =
+  "https://images.pexels.com/photos/416528/pexels-photo-416528.jpeg?auto=compress&cs=tinysrgb&w=1600";
 
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+
+  const featured = products.slice(0, 6);
+
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#2B2B2B]">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-[#E0DAD0]">
-        <div className="grid lg:grid-cols-2 min-h-[70vh]">
-          {/* Hero imagery */}
-          <div className="relative order-2 lg:order-1">
-            <motion.div
-              initial={{ opacity: 0, scale: 1.05 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-full w-full"
-            >
-              <div
-                className="h-full w-full bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                }}
-                aria-hidden="true"
-              />
-            </motion.div>
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#FAF9F6] via-transparent to-transparent opacity-80" />
+    <PageTransition>
+      <div className="min-h-screen bg-[color:var(--nw-bg)]">
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0">
+            <img
+              src={heroImage}
+              alt="Curated bottles on a warm stone table"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-[rgba(15,10,5,0.82)] via-[rgba(34,22,12,0.78)] to-[rgba(112,130,56,0.7)]" />
           </div>
 
-          {/* Hero copy */}
-          <motion.div
-            variants={heroVariants}
-            initial="hidden"
-            animate="visible"
-            className="order-1 lg:order-2 flex flex-col justify-center px-6 py-16 sm:px-10 lg:px-16 xl:px-24 space-y-8"
-          >
-            <p className="tracking-[0.28em] text-xs sm:text-sm uppercase text-[#A89F91]">
-              N I S H A N T   W A T E R S
-            </p>
-            <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl lg:text-6xl leading-tight">
-              Hydrate in Style
-              <span className="block font-['Bodoni_Moda'] text-3xl sm:text-4xl mt-2">
-                with Custom Elegance
-              </span>
-            </h1>
-            <p className="max-w-xl text-base sm:text-lg text-[#4A4A4A]">
-              Bespoke, custom-labeled water bottles crafted for minimalists, hosts,
-              and brands who understand that the smallest details speak the loudest.
-            </p>
+          <Container className="relative z-10 flex min-h-[70vh] flex-col justify-center py-16 md:py-24">
             <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="flex flex-wrap items-center gap-4 pt-2"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              className="max-w-2xl rounded-[12px] bg-[color:var(--nw-panel)]/90 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-md md:p-9"
             >
-              <motion.div
-                variants={heroVariants}
-                className="flex-shrink-0"
+              <p className="mb-3 text-xs font-medium tracking-[0.26em] text-[color:var(--nw-accent-muted)] uppercase">
+                NISHANT WATERS
+              </p>
+              <h1
+                className="font-heading text-3xl leading-tight text-[color:var(--nw-ink)] sm:text-4xl md:text-5xl"
+                style={{ fontFamily: tokens.fonts.heading }}
               >
-                <Button
-                  asChild
+                Custom-labeled water bottles
+                <span className="block text-[color:var(--nw-accent)]">
+                  for considered living.
+                </span>
+              </h1>
+              <p
+                className="mt-4 max-w-xl text-sm text-[color:var(--nw-ink-soft)] sm:text-base"
+                style={{ fontFamily: tokens.fonts.body }}
+              >
+                Design bottles that feel like objects of desire—elevated silhouettes,
+                tactile labels, and colors drawn from earth, clay, and coastal light.
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <MotionButton
                   variant="primary"
-                  className="bg-[#004D40] text-[#FAF9F6] hover:bg-[#026457] px-7 py-3 rounded-full text-sm tracking-wide flex items-center gap-2"
+                  onClick={() => navigate("/shop")}
+                  className="flex items-center gap-2 rounded-[999px] px-6 py-2.5 text-sm font-medium"
                 >
-                  <Link to="/shop" aria-label="Shop custom water bottles">
-                    Shop the Collection
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </motion.div>
-
-              <motion.div variants={heroVariants} className="flex-shrink-0">
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="border border-[#A89F91]/60 text-[#004D40] hover:bg-[#F1EBE0] rounded-full px-6 py-3 text-sm"
+                  Shop the collection
+                  <ArrowRight className="h-4 w-4" />
+                </MotionButton>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const section = document.getElementById("featured");
+                    if (section) section.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="text-xs font-medium text-[color:var(--nw-ink-soft)] underline-offset-4 hover:text-[color:var(--nw-ink)] hover:underline"
                 >
-                  <Link to="/about">Discover the Story</Link>
-                </Button>
-              </motion.div>
+                  Explore featured designs
+                </button>
+              </div>
             </motion.div>
-            <p className="text-xs tracking-[0.18em] uppercase text-[#8F8578] pt-4">
-              Small-batch • Carbon-filtered • Label designs saved in your browser
-            </p>
-          </motion.div>
-        </div>
-      </section>
+          </Container>
+        </section>
 
-      {/* Featured products section */}
-      <section className="px-6 sm:px-10 lg:px-16 xl:px-24 py-16 sm:py-20 space-y-10">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <SectionHeading
-            eyebrow="Featured silhouettes"
-            title="Curated bottles for intentional moments"
-            description="Explore our most-loved vessels, designed to carry your custom narrative in glass-like clarity and understated color." 
-          />
-
-          <div className="flex flex-col items-start gap-3 text-sm text-[#4A4A4A] max-w-sm">
-            <p>
-              Every bottle can be tailored with your chosen typography, iconography, and tone-on-tone color stories. Start from a
-              signature silhouette and make it distinctly yours.
-            </p>
-            <Link
-              to="/shop"
-              className="inline-flex items-center gap-2 text-xs tracking-[0.2em] uppercase text-[#004D40] hover:text-[#026457] underline underline-offset-4"
-            >
-              View all designs
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.15 }}
-        >
-          <ProductGallery
-            products={featuredProducts}
-            layout="asymmetric"
-            showSectionHeading={false}
-          />
-        </motion.div>
-      </section>
-
-      {/* Design philosophy */}
-      <section className="px-6 sm:px-10 lg:px-16 xl:px-24 pb-20">
-        <div className="grid md:grid-cols-[1.2fr,1fr] gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="space-y-6"
-          >
-            <p className="tracking-[0.2em] text-xs uppercase text-[#A89F91]">Label Atelier</p>
-            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl">
-              Design a label that
-              <span className="block font-['Bodoni_Moda'] text-2xl mt-1">reads like a quiet signature</span>
-            </h2>
-            <p className="text-sm sm:text-base text-[#4A4A4A] max-w-xl">
-              Choose from elevated serif and editorial-inspired type, nuanced earth-and-sea tones, and subtle iconography.
-              Our browser-based designer lets you preview every nuance on your bottle before it ever leaves the studio.
-            </p>
-            <ul className="space-y-2 text-sm text-[#4A4A4A]">
-              <li className="flex gap-2">
-                <span className="mt-[6px] h-[6px] w-[6px] rounded-full bg-[#004D40]" aria-hidden="true" />
-                <span>Live label preview on the bottle silhouette as you type.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-[6px] h-[6px] w-[6px] rounded-full bg-[#004D40]" aria-hidden="true" />
-                <span>Fonts and color pairings curated specifically for legibility on glass.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-[6px] h-[6px] w-[6px] rounded-full bg-[#004D40]" aria-hidden="true" />
-                <span>All label drafts are preserved in your browser until you&apos;re ready to order.</span>
-              </li>
-            </ul>
-            <Button
-              asChild
-              variant="secondary"
-              className="mt-2 bg-transparent border border-[#004D40] text-[#004D40] hover:bg-[#E6F1EF] rounded-full px-6 py-3 text-sm"
-            >
-              <Link to="/shop">Begin with a bottle</Link>
-            </Button>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
-            className="relative"
-          >
-            <div className="aspect-[4/5] rounded-3xl bg-[#F1EBE0] shadow-[0_18px_45px_rgba(0,0,0,0.12)] overflow-hidden flex items-center justify-center">
-              <div className="relative h-[80%] w-[38%] rounded-full bg-gradient-to-b from-white to-[#E7F3F1] border border-white/60 shadow-[0_18px_30px_rgba(0,0,0,0.18)] flex items-center justify-center">
-                <div className="absolute inset-x-4 top-10 bottom-10 rounded-2xl border border-[#D9E7E4] bg-white/80 backdrop-blur-sm flex items-center justify-center">
-                  <div className="text-center px-4">
-                    <p className="text-[0.65rem] tracking-[0.24em] uppercase text-[#A89F91] mb-2">
-                      Live Label Preview
-                    </p>
-                    <p className="font-['Playfair_Display'] text-xs text-[#2B2B2B] leading-snug">
-                      "Nishant Waters"
-                      <span className="block font-['Bodoni_Moda'] text-[0.7rem] text-[#004D40] mt-1">
-                        Table No. 04
-                      </span>
-                    </p>
-                  </div>
+        <section id="featured" className="bg-[color:var(--nw-bg)] py-14 md:py-18">
+          <Container>
+            <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2
+                  className="font-heading text-2xl text-[color:var(--nw-ink)] sm:text-3xl"
+                  style={{ fontFamily: tokens.fonts.heading }}
+                >
+                  Featured water silhouettes
+                </h2>
+                <p
+                  className="mt-2 max-w-xl text-sm text-[color:var(--nw-ink-soft)]"
+                  style={{ fontFamily: tokens.fonts.body }}
+                >
+                  A rotating edit of bestselling bottles, from minimalist glass to
+                  sun-warmed terracotta tones. Each can be customized with your label,
+                  typography, and color story.
+                </p>
+              </div>
+              <div className="flex gap-3 text-xs text-[color:var(--nw-ink-soft)]">
+                <div className="flex items-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--nw-accent)]" />
+                  Customizable labels
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--nw-terracotta)]" />
+                  Small-batch production
                 </div>
               </div>
             </div>
-          </motion.div>
-        </div>
-      </section>
-    </div>
+
+            <ProductMasonryGallery products={featured} />
+          </Container>
+        </section>
+
+        <section className="border-t border-[color:var(--nw-border-soft)] bg-[color:var(--nw-panel)] py-12">
+          <Container className="grid gap-8 md:grid-cols-[1.4fr,1fr]">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.6 }}
+              className="rounded-[12px] bg-[color:var(--nw-bg)] p-6 shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
+            >
+              <h3
+                className="font-heading text-xl text-[color:var(--nw-ink)]"
+                style={{ fontFamily: tokens.fonts.heading }}
+              >
+                Intentional details, from cap to base.
+              </h3>
+              <p
+                className="mt-3 text-sm text-[color:var(--nw-ink-soft)]"
+                style={{ fontFamily: tokens.fonts.body }}
+              >
+                Our label editor lets you play with type systems, color planes, and
+                imagery without feeling like software. Drag, drop, and refine as if you
+                were working in a studio—right in your browser.
+              </p>
+              <ul className="mt-4 grid gap-3 text-xs text-[color:var(--nw-ink-soft)] sm:grid-cols-2">
+                <li className="rounded-[10px] bg-[color:var(--nw-panel-soft)] px-3 py-2">
+                  Fluid typography presets designed for bottles.
+                </li>
+                <li className="rounded-[10px] bg-[color:var(--nw-panel-soft)] px-3 py-2">
+                  Palette suggestions inspired by clay, stone, and sea glass.
+                </li>
+                <li className="rounded-[10px] bg-[color:var(--nw-panel-soft)] px-3 py-2">
+                  Mock uploads only—no files leave your browser in this MVP.
+                </li>
+                <li className="rounded-[10px] bg-[color:var(--nw-panel-soft)] px-3 py-2">
+                  Save designs to your cart and revisit before checkout.
+                </li>
+              </ul>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex flex-col justify-between rounded-[12px] bg-[color:var(--nw-terracotta-soft)] px-6 py-7 text-[color:var(--nw-ink-strong)]"
+            >
+              <div>
+                <h3
+                  className="font-heading text-lg"
+                  style={{ fontFamily: tokens.fonts.heading }}
+                >
+                  Crafted as a teaser experience.
+                </h3>
+                <p
+                  className="mt-3 text-sm"
+                  style={{ fontFamily: tokens.fonts.body }}
+                >
+                  This launch version of Nishant Waters is fully front-end and uses
+                  carefully designed mock data—no real checkout, no external uploads,
+                  and no server. It is intentionally built to feel like a finished
+                  store while remaining safe for exploration.
+                </p>
+              </div>
+              <p className="mt-4 text-xs opacity-75">
+                All products, prices, and orders are mocked locally in your browser to
+                make future backend integration seamless.
+              </p>
+            </motion.div>
+          </Container>
+        </section>
+      </div>
+    </PageTransition>
   );
 };
 
