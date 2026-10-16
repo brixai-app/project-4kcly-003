@@ -1,60 +1,141 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'sonner';
-import { AppLayout } from '@/components/AppLayout';
-import HomePage from '@/pages/HomePage';
-import ShopPage from '@/pages/ShopPage';
-import ProductDetailPage from '@/pages/ProductDetailPage';
-import CheckoutPage from '@/pages/CheckoutPage';
-import OrderConfirmationPage from '@/pages/OrderConfirmationPage';
-import { CartDrawer } from '@/components/CartDrawer';
-import { useCart, getCartSummary, useCartDrawerState } from '@/mock';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
+import { AnimatePresence } from "framer-motion";
 
-// NOTE: This application uses client-side mock data and localStorage persistence only.
-// There is no real backend or payment processing.
+import HomePage from "./pages/HomePage";
+import ShopPage from "./pages/ShopPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import CartDrawer from "./components/CartDrawer";
+import {
+  CartItem,
+  loadCartFromStorage,
+  saveCartToStorage,
+  products,
+  updateCartItemQuantity,
+  removeCartItem,
+} from "@/mock";
 
-const AppShell: React.FC = () => {
-  const cart = useCart();
-  const cartSummary = getCartSummary(cart.items);
-  const cartDrawer = useCartDrawerState();
+const App: React.FC = () => {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
-  return (
-    <AppLayout
-      cartCount={cartSummary.totalQuantity}
-      onCartClick={() => cartDrawer.setOpen(true)}
-    >
-      <CartDrawer
-        open={cartDrawer.open}
-        onOpenChange={cartDrawer.setOpen}
-        items={cart.items}
-        subtotal={cartSummary.subtotal}
-        onUpdateQuantity={cart.updateQuantity}
-        onRemoveItem={cart.removeItem}
-      />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/shop" element={<ShopPage />} />
-        <Route path="/product/:id" element={<ProductDetailPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/order-confirmation/:id" element={<OrderConfirmationPage />} />
-      </Routes>
-    </AppLayout>
-  );
-};
+  // Load cart from mock/localStorage once
+  useEffect(() => {
+    const stored = loadCartFromStorage();
+    if (stored && Array.isArray(stored)) {
+      setCart(stored);
+    }
+  }, []);
 
-export const App: React.FC = () => {
+  // Persist cart via mock helper
+  useEffect(() => {
+    saveCartToStorage(cart);
+  }, [cart]);
+
+  const handleAddToCart = (item: CartItem) => {
+    setCart((prev) => {
+      const existingIndex = prev.findIndex(
+        (ci) =>
+          ci.productId === item.productId &&
+          ci.selectedSize === item.selectedSize &&
+          ci.selectedBottleColor === item.selectedBottleColor &&
+          ci.customLabel?.templateId === item.customLabel?.templateId &&
+          ci.customLabel?.customText === item.customLabel?.customText &&
+          ci.customLabel?.textColor === item.customLabel?.textColor &&
+          ci.customLabel?.font === item.customLabel?.font
+      );
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + item.quantity,
+        };
+        return updated;
+      }
+      return [...prev, item];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateQuantity = (id: string, quantity: number) => {
+    setCart((prev) => updateCartItemQuantity(prev, id, quantity));
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setCart((prev) => removeCartItem(prev, id));
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+  };
+
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <BrowserRouter>
-      <Toaster
-        position="top-center"
-        richColors
-        duration={4000}
-        toastOptions={{
-          className:
-            "font-['Merriweather'] text-sm bg-white/95 text-[#0E4D5B] shadow-lg border border-[#E5E7EB]",
-        }}
-      />
-      <AppShell />
+      <div className="flex min-h-screen flex-col bg-[#FFF5E1] text-[#333333]">
+        <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
+
+        <main className="flex-1">
+          <AnimatePresence mode="wait">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <HomePage products={products} onAddToCart={handleAddToCart} />
+                }
+              />
+              <Route path="/shop" element={<ShopPage products={products} />} />
+              <Route
+                path="/product/:id"
+                element={
+                  <ProductDetailPage
+                    products={products}
+                    onAddToCart={handleAddToCart}
+                  />
+                }
+              />
+              <Route
+                path="/checkout"
+                element={<CheckoutPage cart={cart} onClearCart={handleClearCart} />}
+              />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+            </Routes>
+          </AnimatePresence>
+        </main>
+
+        <Footer />
+
+        <CartDrawer
+          open={isCartOpen}
+          onOpenChange={setIsCartOpen}
+          items={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+        />
+
+        {/* Global Sonner toaster for toasts across the app */}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: "#1F130C",
+              color: "#FFF5E1",
+              borderRadius: 9999,
+              border: "1px solid #CBA135",
+              boxShadow: "0 18px 45px rgba(12,7,3,0.6)",
+            },
+          }}
+        />
+      </div>
     </BrowserRouter>
   );
 };

@@ -1,175 +1,247 @@
-import React, { FormEvent, useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Container } from "@/components/layout/Container";
-import { DocumentTitle } from "@/components/seo/DocumentTitle";
-import { MotionButton } from "@/components/ui/MotionButton";
-import { Field } from "@/components/ui/Field";
 import { toast } from "sonner";
+import { saveMockContactMessage } from "@/mock";
 
-const initialForm = {
+interface ContactFormState {
+  name: string;
+  email: string;
+  message: string;
+}
+
+interface ContactErrors {
+  name?: string;
+  email?: string;
+  message?: string;
+}
+
+const initialState: ContactFormState = {
   name: "",
   email: "",
   message: "",
 };
 
-export const ContactPage: React.FC = () => {
-  const [form, setForm] = useState(initialForm);
-  const [errors, setErrors] = useState<{ [K in keyof typeof initialForm]?: string }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const validateEmail = (value: string) => {
+  if (!value) return "Email is required";
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!pattern.test(value)) return "Enter a valid email address";
+  return undefined;
+};
 
-  const validate = () => {
-    const next: typeof errors = {};
-    if (!form.name.trim()) next.name = "Name is required";
-    if (!form.email.trim()) next.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "Enter a valid email";
-    if (!form.message.trim()) next.message = "Please add a message";
-    setErrors(next);
-    return Object.keys(next).length === 0;
+const ContactPage: React.FC = () => {
+  const [form, setForm] = useState<ContactFormState>(initialState);
+  const [errors, setErrors] = useState<ContactErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const validate = (): boolean => {
+    const newErrors: ContactErrors = {};
+    if (!form.name.trim()) newErrors.name = "Name is required";
+    if (!form.message.trim()) newErrors.message = "Message is required";
+    const emailError = validateEmail(form.email.trim());
+    if (emailError) newErrors.email = emailError;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
-      toast.error("Please fix the highlighted fields.");
-      return;
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      // Mocked persistence in localStorage via src/mock.ts helper
+      saveMockContactMessage({ ...form, createdAt: new Date().toISOString() });
+      toast.success("Message sent!", {
+        description: "We have received your note and will reply shortly.",
+      });
+      setForm(initialState);
+      setErrors({});
+    } catch (err) {
+      toast.error("Unable to send message", {
+        description: "Please try again in a moment.",
+      });
+    } finally {
+      setSubmitting(false);
     }
-    setIsSubmitting(true);
-    // Mock submission only – no backend involved
-    window.setTimeout(() => {
-      setIsSubmitting(false);
-      toast.success("Message sent (mock). We'll be in touch soon.");
-      setForm(initialForm);
-    }, 900);
   };
 
   return (
-    <>
-      <DocumentTitle
-        title="Contact"
-        description="Contact Nishant Waters for collaborations, events, and custom water bottle experiences."
-      />
-      <div className="min-h-screen bg-[#FFF8F0] text-[#3B2A23] pb-20">
-        <Container className="pt-16 lg:pt-24 grid gap-12 lg:grid-cols-[3fr,2fr] items-start">
-          <motion.section
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
-            <p className="text-sm uppercase tracking-[0.25em] text-[#A0522D]/80 mb-4">
-              Contact
-            </p>
-            <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl leading-tight text-[#3B2A23] mb-4">
-              Let&apos;s design the perfect bottle for your moment.
-            </h1>
-            <p className="font-['Inter'] text-sm sm:text-base text-[#5b4638] leading-relaxed mb-8 max-w-xl">
-              Share a little about your event, brand, or idea and we&apos;ll help you
-              imagine how Nishant Waters bottles could quietly elevate the
-              experience. This is a fully mock contact flow – no emails are
-              actually sent.
-            </p>
+    <div className="min-h-screen bg-[#FFF5E1] text-[#333333]">
+      <div className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-16 md:flex-row md:py-24">
+        {/* Intro copy */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="md:w-5/12"
+        >
+          <p className="text-xs tracking-[0.3em] text-[#A0522D] uppercase mb-4">
+            Contact
+          </p>
+          <h1 className="font-['Playfair_Display'] text-3xl font-semibold tracking-tight text-[#2B211A] sm:text-4xl">
+            Begin the conversation.
+          </h1>
+          <p className="mt-6 text-sm leading-relaxed text-[#4A3C33] md:text-base">
+            Whether you are curating a private label for an opening night,
+            outfitting a residence, or simply exploring what is possible, we are
+            here to help you shape the details.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-[#5E4C40] md:text-base">
+            Share a few notes about your project, quantities, and timing. A
+            member of our studio will respond with tailored suggestions and next
+            steps.
+          </p>
 
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-6 bg-[#FFF8F0] border border-[#E0C8B6] rounded-3xl p-6 sm:p-8 shadow-md shadow-[#b88a6a33]"
-              noValidate
-            >
-              <Field
-                label="Name"
-                htmlFor="contact-name"
-                error={errors.name}
-              >
+          <div className="mt-8 space-y-2 text-sm text-[#4A3C33]">
+            <p className="font-medium text-[#3C2E25]">Studio hours</p>
+            <p>Monday – Friday, 10:00 – 18:00 (IST)</p>
+            <p className="pt-2 text-xs text-[#7B5A42]">
+              For press and partnerships, please also use this form and include
+              any relevant links.
+            </p>
+          </div>
+        </motion.section>
+
+        {/* Form */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.08 }}
+          className="md:w-7/12"
+        >
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="rounded-3xl border border-[#E3C19C] bg-[#FFF9EF] p-6 shadow-sm md:p-8"
+          >
+            <div className="grid gap-6">
+              {/* Name */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-xs font-medium uppercase tracking-[0.18em] text-[#7B5A42]"
+                >
+                  Name
+                </label>
                 <input
-                  id="contact-name"
+                  id="name"
                   name="name"
                   type="text"
                   autoComplete="name"
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="block w-full rounded-xl border border-[#E0C8B6] bg-[#FFF8F0] px-3 py-2 text-sm font-['Inter'] text-[#3B2A23] shadow-sm focus:border-[#A0522D] focus:outline-none focus:ring-2 focus:ring-[#A0522D]/40"
+                  onChange={handleChange}
+                  className={`mt-2 block w-full rounded-full border bg-white px-4 py-2.5 text-sm text-[#2B211A] outline-none transition-colors duration-150 focus:border-[#CBA135] focus:ring-2 focus:ring-[#CBA135]/40 ${
+                    errors.name
+                      ? "border-[#C96A4A]"
+                      : "border-[#E0C29F] hover:border-[#CBA135]/70"
+                  }`}
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? "name-error" : undefined}
                 />
-              </Field>
+                {errors.name && (
+                  <p
+                    id="name-error"
+                    className="mt-1 text-xs text-[#9B3B2A]"
+                  >
+                    {errors.name}
+                  </p>
+                )}
+              </div>
 
-              <Field
-                label="Email"
-                htmlFor="contact-email"
-                error={errors.email}
-              >
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-xs font-medium uppercase tracking-[0.18em] text-[#7B5A42]"
+                >
+                  Email
+                </label>
                 <input
-                  id="contact-email"
+                  id="email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="block w-full rounded-xl border border-[#E0C8B6] bg-[#FFF8F0] px-3 py-2 text-sm font-['Inter'] text-[#3B2A23] shadow-sm focus:border-[#A0522D] focus:outline-none focus:ring-2 focus:ring-[#A0522D]/40"
+                  onChange={handleChange}
+                  className={`mt-2 block w-full rounded-full border bg-white px-4 py-2.5 text-sm text-[#2B211A] outline-none transition-colors duration-150 focus:border-[#CBA135] focus:ring-2 focus:ring-[#CBA135]/40 ${
+                    errors.email
+                      ? "border-[#C96A4A]"
+                      : "border-[#E0C29F] hover:border-[#CBA135]/70"
+                  }`}
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "email-error" : undefined}
                 />
-              </Field>
+                {errors.email && (
+                  <p
+                    id="email-error"
+                    className="mt-1 text-xs text-[#9B3B2A]"
+                  >
+                    {errors.email}
+                  </p>
+                )}
+              </div>
 
-              <Field
-                label="How can we help?"
-                htmlFor="contact-message"
-                error={errors.message}
-              >
+              {/* Message */}
+              <div>
+                <label
+                  htmlFor="message"
+                  className="block text-xs font-medium uppercase tracking-[0.18em] text-[#7B5A42]"
+                >
+                  Message
+                </label>
                 <textarea
-                  id="contact-message"
+                  id="message"
                   name="message"
                   rows={5}
                   value={form.message}
-                  onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                  className="block w-full rounded-xl border border-[#E0C8B6] bg-[#FFF8F0] px-3 py-2 text-sm font-['Inter'] text-[#3B2A23] shadow-sm focus:border-[#A0522D] focus:outline-none focus:ring-2 focus:ring-[#A0522D]/40 resize-vertical"
+                  onChange={handleChange}
+                  className={`mt-2 block w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm text-[#2B211A] outline-none transition-colors duration-150 focus:border-[#CBA135] focus:ring-2 focus:ring-[#CBA135]/40 ${
+                    errors.message
+                      ? "border-[#C96A4A]"
+                      : "border-[#E0C29F] hover:border-[#CBA135]/70"
+                  }`}
+                  aria-invalid={!!errors.message}
+                  aria-describedby={
+                    errors.message ? "message-error" : undefined
+                  }
                 />
-              </Field>
-
-              <div className="pt-2 flex items-center justify-between gap-4 flex-wrap">
-                <MotionButton
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-[#A0522D] text-[#FFF8F0] hover:bg-[#8c4626] disabled:opacity-60 disabled:cursor-not-allowed px-6 py-2.5 rounded-full text-sm font-['Inter'] shadow-md shadow-[#a0522d66] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#A0522D] focus-visible:ring-offset-[#FFF8F0]"
-                >
-                  {isSubmitting ? "Sending..." : "Send message"}
-                </MotionButton>
-                <p className="text-xs font-['Inter'] text-[#7a5b48]">
-                  This is a demo experience with mock-only submissions.
-                </p>
+                {errors.message && (
+                  <p
+                    id="message-error"
+                    className="mt-1 text-xs text-[#9B3B2A]"
+                  >
+                    {errors.message}
+                  </p>
+                )}
               </div>
-            </form>
-          </motion.section>
 
-          <motion.aside
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-            className="space-y-6"
-          >
-            <div className="rounded-3xl bg-[#F4E1D2] p-6 shadow-md shadow-[#b88a6a33]">
-              <h2 className="font-['Playfair_Display'] text-xl mb-2 text-[#3B2A23]">
-                Studio hours
-              </h2>
-              <p className="font-['Inter'] text-sm text-[#5b4638] mb-4">
-                We imagine every label as if it were headed to a gallery opening
-                or slow Sunday brunch. Expect thoughtful, measured replies.
-              </p>
-              <p className="font-['Inter'] text-xs text-[#5b4638]">
-                Monday – Friday · 10:00 – 17:00 (Mock Studio Time)
-              </p>
+              {/* Submit */}
+              <div className="flex items-center justify-between gap-4 pt-2">
+                <p className="text-[11px] leading-relaxed text-[#8A6A4E]">
+                  This form is fully client-side and uses mocked storage — no
+                  messages are sent to a real backend yet.
+                </p>
+                <motion.button
+                  type="submit"
+                  disabled={submitting}
+                  whileHover={{ scale: submitting ? 1 : 1.03 }}
+                  whileTap={{ scale: submitting ? 1 : 0.96 }}
+                  className="inline-flex items-center justify-center rounded-full bg-[#A0522D] px-6 py-2.5 text-sm font-medium text-[#FFF5E1] shadow-[0_10px_20px_rgba(98,46,20,0.45)] transition-colors duration-150 hover:bg-[#8E4322] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF9EF] disabled:cursor-not-allowed disabled:bg-[#C08A6C] disabled:shadow-none"
+                >
+                  {submitting ? "Sending…" : "Send message"}
+                </motion.button>
+              </div>
             </div>
-            <div className="rounded-3xl border border-[#E0C8B6] bg-[#FFF8F0] p-6 space-y-3">
-              <h3 className="font-['Inter'] text-sm font-semibold text-[#708238] tracking-wide">
-                Collaboration notes
-              </h3>
-              <p className="font-['Inter'] text-sm text-[#5b4638]">
-                Brand launches, curated events, concept hotels, slow living
-                spaces – we love projects where water is more than utility.
-              </p>
-              <p className="font-['Inter'] text-xs text-[#7a5b48]">
-                Since this is a mock front-end experience, any details you share
-                stay in your browser only and are never actually transmitted.
-              </p>
-            </div>
-          </motion.aside>
-        </Container>
+          </form>
+        </motion.section>
       </div>
-    </>
+    </div>
   );
 };
 

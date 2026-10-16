@@ -1,209 +1,198 @@
-import React, { useEffect, useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X, Trash2, Plus, Minus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import {
-  CartItem,
-  cartClearAndNotify,
-  cartRemoveAndNotify,
-  cartUpdateQtyAndNotify,
-  calculateCartTotals,
-  formatCurrency,
-  getProductById,
-} from '@/mock';
-import { MotionButton } from './ui';
+import React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Minus, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CartItem, computeCartSubtotal, findProductById } from "@/mock";
+import { toast } from "sonner";
 
-interface CartDrawerProps {
+export type CartDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
+  items: CartItem[];
+  onUpdateQuantity: (id: string, quantity: number) => void;
+  onRemoveItem: (id: string) => void;
+};
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onOpenChange }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const navigate = useNavigate();
+export const CartDrawer: React.FC<CartDrawerProps> = ({
+  open,
+  onOpenChange,
+  items,
+  onUpdateQuantity,
+  onRemoveItem,
+}) => {
+  const subtotal = computeCartSubtotal(items);
 
-  useEffect(() => {
-    if (!open) return;
-    // lazy load latest cart when opened to keep in sync
-    const stored = JSON.parse(localStorage.getItem('nishant_waters_cart_v1') || '[]');
-    setItems(stored);
-  }, [open]);
-
-  const handleQtyChange = (item: CartItem, delta: number) => {
-    const nextQty = item.quantity + delta;
-    const updated = cartUpdateQtyAndNotify(item.id, nextQty);
-    setItems(updated);
-    toast.success('Updated quantity');
-  };
-
-  const handleRemove = (itemId: string) => {
-    const updated = cartRemoveAndNotify(itemId);
-    setItems(updated);
-    toast.success('Removed from cart');
-  };
-
-  const { subtotal } = calculateCartTotals(items);
-
-  const handleCheckout = () => {
-    if (!items.length) {
-      toast.error('Your cart is empty.');
-      return;
-    }
-    onOpenChange(false);
-    navigate('/checkout');
-  };
-
-  const handleClear = () => {
-    cartClearAndNotify();
-    setItems([]);
-    toast.success('Cart cleared');
+  const handleRemove = (id: string) => {
+    onRemoveItem(id);
+    toast.success("Item removed from cart", {
+      description: "You can continue refining your label before checking out.",
+    });
   };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm data-[state=open]:animate-fadeIn" />
-        <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-[#FAF9F6] shadow-2xl data-[state=open]:animate-slideIn data-[state=closed]:animate-slideOut">
-          <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-4">
-            <Dialog.Title className="text-base font-semibold text-slate-900 font-['Poppins']">
-              Your cart
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <button
-                aria-label="Close cart"
-                className="rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E4D5B]/70"
+      <AnimatePresence>
+        {open && (
+          <Dialog.Portal forceMount>
+            <Dialog.Overlay asChild>
+              <motion.div
+                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                aria-hidden="true"
+              />
+            </Dialog.Overlay>
+
+            <Dialog.Content asChild>
+              <motion.aside
+                className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[#E4D0B8] bg-[#FFF5E1] shadow-xl"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 320, damping: 32 }}
               >
-                <X className="h-4 w-4" />
-              </button>
-            </Dialog.Close>
-          </div>
+                <header className="flex items-center justify-between border-b border-[#E4D0B8] px-5 py-4">
+                  <Dialog.Title className="text-sm font-semibold tracking-[0.18em] text-[#333333] uppercase">
+                    Cart
+                  </Dialog.Title>
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-[#F4E1C0] text-[#4b3b32] shadow-sm transition-colors duration-150 hover:bg-[#E6D1B2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF5E1]"
+                      aria-label="Close cart"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </Dialog.Close>
+                </header>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-            {!items.length && (
-              <p className="text-sm text-slate-500 font-['Merriweather']">
-                Your cart is feeling a little parched. Start by customizing a bottle.
-              </p>
-            )}
-
-            {items.map(item => {
-              const product = getProductById(item.productId);
-              if (!product) return null;
-              const label = item.customLabel;
-              const priceEach = formatCurrency(
-                // simple mock price uses helper indirectly through totals; we replicate:
-                product.basePrice + 4 + (label.logoImage ? 2 : 0),
-              );
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex gap-3 rounded-2xl bg-white/70 p-3 shadow-sm ring-1 ring-white"
-                >
-                  <div className="h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="text-sm font-semibold text-slate-900 font-['Poppins']">
-                            {product.name}
-                          </h3>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 font-['Merriweather']">
-                            "{label.text}" · {label.font}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemove(item.id)}
-                          aria-label="Remove item"
-                          className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-['Merriweather']"
-                          aria-label={`Label color ${label.backgroundColor}`}
-                        >
-                          <span
-                            className="h-3 w-3 rounded-full border border-slate-300"
-                            style={{ backgroundColor: label.backgroundColor }}
-                          />
-                          Label tone
-                        </span>
-                        {label.logoImage && <span>Logo added</span>}
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-xs font-['Merriweather'] text-slate-600">
-                        <span className="font-semibold text-slate-900">{priceEach}</span>
-                        <span className="text-slate-400">each</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs">
-                          <button
-                            onClick={() => handleQtyChange(item, -1)}
-                            disabled={item.quantity <= 1}
-                            className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Decrease quantity"
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                  {items.length === 0 ? (
+                    <p className="mt-4 text-sm text-[#6A5649]">
+                      Your cart is quiet. Start by layering a label that feels like your evening.
+                    </p>
+                  ) : (
+                    <ul className="space-y-4">
+                      {items.map((item) => {
+                        const product = findProductById(item.productId);
+                        // support both imageUrl and images[0]
+                        const img = (product as any)?.images?.[0] ?? product?.imageUrl;
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex gap-3 rounded-lg border border-[#E4D0B8] bg-white p-3"
                           >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="mx-2 min-w-[1.5rem] text-center font-['Merriweather']">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleQtyChange(item, 1)}
-                            disabled={item.quantity >= 10}
-                            className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                            {img && (
+                              <div className="h-20 w-16 overflow-hidden rounded-md bg-[#F7E7CF]">
+                                <img
+                                  src={img}
+                                  alt={product?.name ?? "Bottle"}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex flex-1 flex-col text-xs">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-[13px] font-medium text-[#333333]">
+                                    {product?.name ?? "Custom Bottle"}
+                                  </p>
+                                  <p className="mt-0.5 text-[11px] text-[#7A6558]">
+                                    {item.selectedSize} 
+                                    {item.selectedSize && item.selectedBottleColor && " • "}
+                                    {item.selectedBottleColor}
+                                  </p>
+                                  {item.customLabel && (
+                                    <p className="mt-0.5 text-[11px] text-[#7A6558]">
+                                      Label: {item.customLabel.customText ?? "Custom"}
+                                    </p>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemove(item.id)}
+                                  className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-full border border-transparent bg-[#F4E1C0] text-[#4b3b32] shadow-sm transition-colors duration-150 hover:bg-[#E6D1B2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF5E1]"
+                                  aria-label="Remove item"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between">
+                                <div className="inline-flex items-center rounded-full border border-[#E4D0B8] bg-[#FFF8ED] px-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))
+                                    }
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#4b3b32] transition-colors duration-150 hover:bg-[#E6D1B2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135] focus-visible:ring-offset-1 focus-visible:ring-offset-[#FFF5E1]"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </button>
+                                  <span className="px-2 text-[11px] tracking-wide text-[#4b3b32]">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#4b3b32] transition-colors duration-150 hover:bg-[#E6D1B2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135] focus-visible:ring-offset-1 focus-visible:ring-offset-[#FFF5E1]"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </div>
+                                <p className="text-[13px] font-medium text-[#333333]">
+                                  ${(item.price * item.quantity).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
-              );
-            })}
-          </div>
 
-          <div className="border-t border-slate-200/70 px-6 py-4">
-            <div className="flex items-center justify-between text-sm font-['Merriweather']">
-              <span className="text-slate-600">Subtotal</span>
-              <span className="font-semibold text-slate-900">{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <MotionButton
-                variant="ghost"
-                className="flex-1 rounded-2xl border border-slate-200 bg-white/80 text-xs font-['Merriweather']"
-                onClick={handleClear}
-                disabled={!items.length}
-              >
-                Clear
-              </MotionButton>
-              <MotionButton
-                className="flex-1 rounded-2xl text-xs font-['Merriweather']"
-                onClick={handleCheckout}
-                disabled={!items.length}
-              >
-                Checkout
-              </MotionButton>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-500 font-['Merriweather']">
-              This is a mock, client-only checkout. No real payment is processed.
-            </p>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
+                <div className="border-t border-[#E4D0B8] bg-[#FFF1DC] px-5 py-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#6A5649]">Subtotal</span>
+                    <span className="text-base font-semibold text-[#333333]">
+                      ${subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-[#8A6C5A]">
+                    Taxes are estimated at checkout. All orders are mocked locally — no real
+                    payments are processed.
+                  </p>
+                  <Dialog.Close asChild>
+                    <Link
+                      to="/checkout"
+                      className={`mt-3 inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium uppercase tracking-[0.18em] shadow-sm transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#CBA135] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFF5E1] ${
+                        items.length === 0
+                          ? "cursor-not-allowed bg-[#E1CBB1] text-[#9A7E67]"
+                          : "bg-[#A0522D] text-[#FFF5E1] hover:bg-[#8D4322]"
+                      }`}
+                      aria-disabled={items.length === 0}
+                      onClick={(e) => {
+                        if (items.length === 0) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      Proceed to checkout
+                    </Link>
+                  </Dialog.Close>
+                </div>
+              </motion.aside>
+            </Dialog.Content>
+          </Dialog.Portal>
+        )}
+      </AnimatePresence>
     </Dialog.Root>
   );
 };
+
+export default CartDrawer;
