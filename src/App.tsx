@@ -1,79 +1,61 @@
-import React from "react";
-import { BrowserRouter } from "react-router-dom";
-import { Toaster } from "sonner";
-import { AnimatePresence } from "framer-motion";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { AppLayout } from '@/components/AppLayout';
+import HomePage from '@/pages/HomePage';
+import ShopPage from '@/pages/ShopPage';
+import ProductDetailPage from '@/pages/ProductDetailPage';
+import CheckoutPage from '@/pages/CheckoutPage';
+import OrderConfirmationPage from '@/pages/OrderConfirmationPage';
+import { CartDrawer } from '@/components/CartDrawer';
+import { useCart, getCartSummary, useCartDrawerState } from '@/mock';
 
-import { AuthProvider } from "./state/authStore";
-import { CartProvider } from "./state/cartStore";
-import { OrderProvider } from "./state/orderStore";
-
-import { Header } from "./components/layout/Header";
-import { Footer } from "./components/layout/Footer";
-import { CartDrawer } from "./components/cart/CartDrawer";
-import { AppRoutes } from "./router/routes";
-import { PageTransition } from "./components/layout/PageTransition";
-
-// NOTE: This app is fully frontend-only and relies on centralized mock data
-// defined in src/mock.ts / src/mockData.ts for products, users, and orders.
-// There is NO real backend or network I/O; all state is stored in-memory
-// and persisted via localStorage for the mock auth and cart flows.
+// NOTE: This application uses client-side mock data and localStorage persistence only.
+// There is no real backend or payment processing.
 
 const AppShell: React.FC = () => {
+  const cart = useCart();
+  const cartSummary = getCartSummary(cart.items);
+  const cartDrawer = useCartDrawerState();
+
   return (
-    <div className="min-h-screen bg-sand-soft text-stone-900 flex flex-col">
-      {/* Skip link for a11y */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-cream focus:text-stone-900 focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg"
-      >
-        Skip to main content
-      </a>
-
-      <Header />
-      <CartDrawer />
-
-      <main
-        id="main-content"
-        className="flex-1 pt-16" // account for fixed header if any
-        aria-label="Main content"
-      >
-        <PageTransition>
-          <AppRoutes />
-        </PageTransition>
-      </main>
-
-      <Footer />
-
-      <Toaster
-        position="bottom-center"
-        theme="light"
-        toastOptions={{
-          duration: 3000,
-          className:
-            "rounded-xl bg-cream/95 text-stone-900 shadow-lg border border-sand-soft font-sans text-sm",
-        }}
+    <AppLayout
+      cartCount={cartSummary.totalQuantity}
+      onCartClick={() => cartDrawer.setOpen(true)}
+    >
+      <CartDrawer
+        open={cartDrawer.open}
+        onOpenChange={cartDrawer.setOpen}
+        items={cart.items}
+        subtotal={cartSummary.subtotal}
+        onUpdateQuantity={cart.updateQuantity}
+        onRemoveItem={cart.removeItem}
       />
-    </div>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/shop" element={<ShopPage />} />
+        <Route path="/product/:id" element={<ProductDetailPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-confirmation/:id" element={<OrderConfirmationPage />} />
+      </Routes>
+    </AppLayout>
   );
 };
 
 export const App: React.FC = () => {
-  // Global font classes are attached via index.css with Playfair Display & Inter
-  // Here we just ensure providers wrap the entire visual tree.
   return (
-    <React.StrictMode>
-      <BrowserRouter>
-        <AuthProvider>
-          <CartProvider>
-            <OrderProvider>
-              <AnimatePresence mode="wait">
-                <AppShell />
-              </AnimatePresence>
-            </OrderProvider>
-          </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </React.StrictMode>
+    <BrowserRouter>
+      <Toaster
+        position="top-center"
+        richColors
+        duration={4000}
+        toastOptions={{
+          className:
+            "font-['Merriweather'] text-sm bg-white/95 text-[#0E4D5B] shadow-lg border border-[#E5E7EB]",
+        }}
+      />
+      <AppShell />
+    </BrowserRouter>
   );
 };
 
