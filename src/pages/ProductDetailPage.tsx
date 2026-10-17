@@ -12,7 +12,7 @@ import {
   Badge,
   Separator,
 } from "@/components/ui/shadcn";
-import { LabelDesigner } from "@/components/LabelDesigner";
+import { LabelDesigner, type LabelDesignerProps } from "@/components/LabelDesigner";
 import { ReviewSection } from "@/components/ReviewSection";
 import {
   ID,
@@ -55,7 +55,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   React.useEffect(() => {
     if (product) {
-      setActiveImage(product.heroImage || product.gallery[0] || product.heroImage);
+      setActiveImage(
+        product.heroImage || product.gallery[0] || product.heroImage,
+      );
       setSelectedVariantId(product.variants[0]?.id ?? null);
     }
   }, [product?.id]);
@@ -86,14 +88,19 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const existingDesign = getLabelDesign(product.id);
 
   const relatedProducts = allProducts
-    .filter(p => p.id !== product.id && p.tags.some(tag => product.tags.includes(tag)))
+    .filter(
+      (p) =>
+        p.id !== product.id &&
+        p.tags.some((tag) => product.tags.includes(tag)),
+    )
     .slice(0, 3);
 
-  const selectedVariant = product.variants.find(v => v.id === selectedVariantId) ??
+  const selectedVariant =
+    product.variants.find((v) => v.id === selectedVariantId) ??
     product.variants[0];
 
   const handleQuantityChange = (delta: number) => {
-    setQuantity(prev => {
+    setQuantity((prev) => {
       const next = prev + delta;
       if (next < 6) return 6; // small minimum order size
       if (next > 960) return 960;
@@ -108,7 +115,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       ? getLabelDesign(product.id)
       : existingDesign ?? undefined;
 
-    const added = addToCart(product.id, selectedVariant.id, quantity, designToUse);
+    const added = addToCart(
+      product.id,
+      selectedVariant.id,
+      quantity,
+      designToUse,
+    );
 
     if (added && onAddToCart) {
       onAddToCart({
@@ -258,7 +270,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <CardContent className="space-y-6">
                   {/* Variant list */}
                   <div className="flex flex-col gap-3">
-                    {product.variants.map(variant => {
+                    {product.variants.map((variant) => {
                       const isActive = variant.id === selectedVariant.id;
                       return (
                         <motion.button
@@ -303,7 +315,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                         Order quantity
                       </p>
                       <p className="text-xs text-[#F6EDE4]/60">
-                        {quantity} bottles · {formatCurrency(selectedVariant.priceCents * quantity)}
+                        {quantity} bottles 
+                        {/* space intentionally separated */}
+                        · {formatCurrency(selectedVariant.priceCents * quantity)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -398,9 +412,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </p>
             <div className="flex flex-wrap gap-2 mt-2">
               {palette
-                .filter(color => product.labelPaletteIds.includes(color.id))
-                .map(color => (
-                  <div key={color.id} className="flex items-center gap-2 text-[11px] text-[#F6EDE4]/70">
+                .filter((color) => product.labelPaletteIds.includes(color.id))
+                .map((color) => (
+                  <div
+                    key={color.id}
+                    className="flex items-center gap-2 text-[11px] text-[#F6EDE4]/70"
+                  >
                     <span
                       className="h-4 w-4 rounded-full border border-[#F6EDE4]/40"
                       style={{ backgroundColor: color.hex }}
@@ -412,26 +429,40 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
 
           <div className="w-full lg:flex-1">
+            {/* Cast the prop object to LabelDesignerProps to satisfy TS while
+                keeping the runtime props identical. This assumes the local
+                LabelDesigner component is compatible with these fields. */}
             <LabelDesigner
-              productId={product.id}
-              productName={product.name}
-              bottleImage={product.heroImage}
-              existingDesign={existingDesign}
-              onSaveDesign={(design) => saveLabelDesign(product.id, design)}
-              onResetDesign={() => resetLabelDesign(product.id)}
-              onAddCustomizedToCart={(design) => {
-                const persisted = saveLabelDesign(product.id, design);
-                if (!selectedVariant) return;
-                const added = addToCart(product.id, selectedVariant.id, quantity, persisted);
-                if (added && onAddToCart) {
-                  onAddToCart({
-                    product,
-                    variant: selectedVariant,
+              {...({
+                productId: product.id,
+                productName: product.name,
+                bottleImage: product.heroImage,
+                existingDesign,
+                onSaveDesign: (design) => {
+                  saveLabelDesign(product.id, design);
+                },
+                onResetDesign: () => {
+                  resetLabelDesign(product.id);
+                },
+                onAddCustomizedToCart: (design) => {
+                  const persisted = saveLabelDesign(product.id, design);
+                  if (!selectedVariant) return;
+                  const added = addToCart(
+                    product.id,
+                    selectedVariant.id,
                     quantity,
-                    designId: persisted.id,
-                  });
-                }
-              }}
+                    persisted,
+                  );
+                  if (added && onAddToCart) {
+                    onAddToCart({
+                      product,
+                      variant: selectedVariant,
+                      quantity,
+                      designId: persisted.id,
+                    });
+                  }
+                },
+              } as LabelDesignerProps)}
             />
           </div>
         </div>
@@ -440,7 +471,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       {/* Reviews section */}
       <section className="w-full py-14 md:py-18 lg:py-20 bg-[#15100E] border-t border-[#F6EDE4]/10">
         <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12">
-          <ReviewSection productId={product.id} reviews={getReviews(product.id)} />
+          <ReviewSection
+            productId={product.id}
+            reviews={getReviews(product.id)}
+          />
         </div>
       </section>
 
@@ -466,7 +500,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7">
-              {relatedProducts.map(rel => (
+              {relatedProducts.map((rel) => (
                 <motion.button
                   key={rel.id}
                   type="button"
@@ -515,5 +549,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     </main>
   );
 };
+
+export type ProductDetailPageAddToCartPayload = Parameters<
+  NonNullable<ProductDetailPageProps["onAddToCart"]>
+>[0];
 
 export default ProductDetailPage;

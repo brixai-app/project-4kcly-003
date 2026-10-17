@@ -8,7 +8,7 @@ import ProductDetailPage from '@/pages/ProductDetailPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
-import { addToCart, getCartItemCount } from '@/mock';
+import { addToCart, getCartItemCount, type Product, type ProductVariant } from '@/mock';
 import { toast } from 'sonner';
 
 // Shared cart handler type used by low-level cart logic
@@ -22,20 +22,7 @@ export type AddToCartHandler = (
 // Simple handler used by list/grid cards that only know productId
 export type SimpleAddToCartHandler = (productId: string) => void;
 
-// Detailed handler used by product detail page that knows product, variant, etc.
-export interface ProductVariant {
-  id: string;
-  name: string;
-  price: number;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  variants?: ProductVariant[];
-}
-
+// Detailed handler payload used by product detail page
 export type DetailedAddToCartPayload = {
   product: Product;
   variant: ProductVariant;
@@ -43,6 +30,7 @@ export type DetailedAddToCartPayload = {
   designId?: string;
 };
 
+// Detailed handler used by product detail page that knows product, variant, etc.
 export type DetailedAddToCartHandler = (
   payload: DetailedAddToCartPayload,
 ) => void;
