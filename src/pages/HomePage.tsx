@@ -1,333 +1,345 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Droplet, Sparkles } from "lucide-react";
+import { ArrowRight, Droplets, Sparkles, Leaf } from "lucide-react";
 
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/shadcn";
-import { BRANDY_PALETTE, useProducts } from "@/mock";
-import ReviewSection from "@/components/ReviewSection";
+import { Product, getProducts, formatCurrency } from "@/mock";
+import { ProductCard } from "@/components/ProductCard";
 
-const heroVariants = {
+export interface HomePageProps {
+  onAddToCart?: (productId: string, variantId: string) => void;
+}
+
+const pageVariants = {
+  hidden: { opacity: 0, y: 16 },
+  enter: { opacity: 1, y: 0 },
+};
+
+const heroTextVariants = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: "easeOut" } },
+  enter: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.19, 1, 0.22, 1] } },
 };
 
-const sectionVariants = {
-  hidden: { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
-};
-
-const staggerParent = {
-  visible: {
-    transition: {
-      staggerChildren: 0.12,
-    },
+const heroImageVariants = {
+  hidden: { opacity: 0, x: 40, scale: 1.02 },
+  enter: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] },
   },
 };
 
-const HomePage: React.FC = () => {
-  const products = useProducts();
-  const featured = products.filter((p) => p.featured).slice(0, 3);
-  const remaining = products.filter((p) => !p.featured).slice(0, 3);
-
-  return (
-    <div className="w-full bg-[--nw-cream] text-[--nw-ink]">
-      {/* HERO */}
-      <section
-        className="relative w-full min-h-[70vh] overflow-hidden bg-gradient-to-br from-[--nw-amber-deep] via-[--nw-sienna] to-[--nw-cocoa] text-amber-50"
-        style={{
-          // ensure palette values are available as CSS vars from global styles; fallback here
-          // @ts-expect-error runtime CSS var fallback
-          "--nw-cream": BRANDY_PALETTE.cream,
-          // @ts-expect-error
-          "--nw-ink": BRANDY_PALETTE.inkSoft,
-          // @ts-expect-error
-          "--nw-amber": BRANDY_PALETTE.amber,
-          // @ts-expect-error
-          "--nw-amber-deep": BRANDY_PALETTE.amberDeep,
-          // @ts-expect-error
-          "--nw-sienna": BRANDY_PALETTE.sienna,
-          // @ts-expect-error
-          "--nw-cocoa": BRANDY_PALETTE.cocoa,
-        }}
-      >
-        {/* subtle texture overlay */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),transparent_55%),radial-gradient(circle_at_bottom,_rgba(0,0,0,0.35),transparent_60%)] mix-blend-soft-light opacity-90" />
-
-        {/* bottle silhouette stripe */}
-        <div className="pointer-events-none absolute right-[-10%] top-[-10%] h-[140%] w-[40%] bg-gradient-to-b from-white/10 via-white/2 to-transparent opacity-70 blur-3xl" />
-
-        <div className="relative w-full max-w-[1600px] mx-auto px-6 lg:px-12 py-20 lg:py-28 flex flex-col lg:flex-row gap-16 lg:gap-24 items-center">
-          <motion.div
-            className="flex-1 max-w-xl"
-            variants={heroVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/40 bg-amber-100/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-amber-100/80 backdrop-blur">
-              <Sparkles className="h-3 w-3" />
-              <span>Quiet luxury, bottled</span>
-            </div>
-            <h1
-              className="mt-6 text-4xl sm:text-5xl lg:text-6xl leading-tight font-semibold text-amber-50 font-['Playfair_Display']"
-            >
-              Nishant Waters
-              <span className="block text-amber-100/80 text-2xl sm:text-3xl lg:text-4xl mt-2">
-                Custom Labeled Water Bottles
-              </span>
-            </h1>
-            <p className="mt-5 text-sm sm:text-base lg:text-lg text-amber-100/80 max-w-xl leading-relaxed font-['Inter']">
-              Crafted for boutique hotels, galleries, studios, and hosts who consider every surface. Design a label that feels like part of the room, not an afterthought.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <motion.div whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-                <Button
-                  asChild
-                  className="group rounded-full bg-amber-200 text-[--nw-ink] hover:bg-amber-100 px-7 py-2.5 text-sm font-medium tracking-wide shadow-lg shadow-black/20 border border-amber-50/40"
-                >
-                  <Link to="/catalog" aria-label="Shop the Nishant Waters collection">
-                    <span className="flex items-center gap-2">
-                      Explore the collection
-                      <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                    </span>
-                  </Link>
-                </Button>
-              </motion.div>
-
-              <div className="flex flex-col text-xs sm:text-sm text-amber-100/75 font-['Inter']">
-                <span>Minimums from just 24 bottles</span>
-                <span className="text-amber-100/60">Lead times from 10–14 days · Complimentary proof</span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="flex-1 w-full max-w-md lg:max-w-none"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
-          >
-            <div className="relative h-[320px] sm:h-[360px] md:h-[420px] lg:h-[460px]">
-              {/* base "table" */}
-              <div className="absolute inset-x-0 bottom-6 sm:bottom-10 h-40 bg-gradient-to-t from-black/40 via-black/20 to-transparent blur-2xl" />
-
-              {/* bottle cards in staggered masonry */}
-              <div className="relative h-full flex items-end justify-center gap-4 sm:gap-6">
-                <motion.div
-                  className="relative h-[68%] w-[30%] min-w-[110px] rounded-3xl border border-amber-50/20 bg-gradient-to-b from-amber-50/10 via-amber-50/5 to-amber-950/40 backdrop-blur-sm shadow-xl shadow-black/40 overflow-hidden"
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, duration: 0.8, ease: "easeOut" }}
-                >
-                  <BottleMock labelColor={BRANDY_PALETTE.creamSoft} labelName="Soft Cream" />
-                </motion.div>
-
-                <motion.div
-                  className="relative h-[88%] w-[34%] min-w-[120px] rounded-3xl border border-amber-50/30 bg-gradient-to-b from-amber-50/15 via-amber-50/8 to-amber-950/40 backdrop-blur-sm shadow-2xl shadow-black/50 overflow-hidden"
-                  initial={{ opacity: 0, y: 60 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25, duration: 0.9, ease: "easeOut" }}
-                >
-                  <BottleMock labelColor={BRANDY_PALETTE.amberDeep} labelName="Smoked Caramel" highlight />
-                </motion.div>
-
-                <motion.div
-                  className="relative h-[78%] w-[28%] min-w-[100px] rounded-3xl border border-amber-50/20 bg-gradient-to-b from-amber-50/10 via-amber-50/5 to-amber-950/40 backdrop-blur-sm shadow-xl shadow-black/40 overflow-hidden hidden sm:block"
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35, duration: 0.8, ease: "easeOut" }}
-                >
-                  <BottleMock labelColor={BRANDY_PALETTE.sienna} labelName="Kiln Sienna" />
-                </motion.div>
-              </div>
-
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.35),transparent_55%)] mix-blend-screen" />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* EDITORIAL SHOWCASE SECTION */}
-      <section className="w-full bg-[--nw-cream] text-[--nw-ink] py-16 sm:py-20 lg:py-24">
-        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12">
-          <motion.div
-            className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-10 lg:gap-16 items-start"
-            variants={sectionVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-          >
-            {/* Masonry teaser of products */}
-            <motion.div
-              className="grid grid-cols-2 gap-4 sm:gap-5 md:gap-6"
-              variants={staggerParent}
-            >
-              {featured.map((product, index) => (
-                <motion.div
-                  key={product.id}
-                  className={
-                    index === 1
-                      ? "row-span-2 h-full"
-                      : "row-span-1"
-                  }
-                  variants={sectionVariants}
-                >
-                  <Card className="group relative h-full min-h-[180px] sm:min-h-[220px] overflow-hidden border-amber-900/10 bg-gradient-to-b from-amber-50/70 via-amber-50 to-amber-100/70 shadow-sm hover:shadow-md transition-shadow duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/5 opacity-80" />
-                    <div className="relative flex h-full flex-col justify-between p-4 sm:p-5">
-                      <div>
-                        <p className="text-[0.65rem] tracking-[0.2em] uppercase text-amber-900/60 mb-1 font-['Inter']">
-                          Featured
-                        </p>
-                        <h2 className="font-['Playfair_Display'] text-base sm:text-lg text-amber-950 leading-snug">
-                          {product.name}
-                        </h2>
-                        <p className="mt-1.5 text-xs sm:text-sm text-amber-900/70 line-clamp-3 font-['Inter']">
-                          {product.shortDescription}
-                        </p>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <p className="text-xs text-amber-900/70 font-['Inter']">
-                            From <span className="font-medium">${product.price.toFixed(2)}</span>
-                          </p>
-                          <p className="text-[0.7rem] text-amber-900/60 font-['Inter']">
-                            Min. {product.minOrderQty} bottles
-                          </p>
-                        </div>
-                        <Link
-                          to={`/product/${product.id}`}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-amber-900 text-amber-50 px-3 py-1.5 text-[0.7rem] sm:text-xs font-medium tracking-wide shadow-sm hover:bg-amber-800 transition-colors duration-200"
-                        >
-                          Customize
-                          <Droplet className="h-3.5 w-3.5" />
-                        </Link>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-
-              {remaining.map((product) => (
-                <motion.div key={product.id} variants={sectionVariants}>
-                  <Card className="relative h-full min-h-[160px] overflow-hidden border-dashed border-amber-900/15 bg-gradient-to-br from-amber-50/60 via-amber-50 to-amber-100/80">
-                    <CardContent className="relative p-3 sm:p-4 flex h-full flex-col justify-between">
-                      <div>
-                        <h3 className="font-['Playfair_Display'] text-sm sm:text-base text-amber-950">
-                          {product.name}
-                        </h3>
-                        <p className="mt-1 text-[0.7rem] sm:text-xs text-amber-900/70 line-clamp-2 font-['Inter']">
-                          {product.shortDescription}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-[0.7rem] text-amber-900/70 font-['Inter']">
-                        {product.capacityMl}ml • From ${product.price.toFixed(2)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
-
-            {/* Craftsmanship copy */}
-            <motion.div
-              className="space-y-5 sm:space-y-6 max-w-xl"
-              variants={sectionVariants}
-            >
-              <p className="text-xs tracking-[0.28em] uppercase text-amber-900/60 font-['Inter']">
-                Crafted for the room, not the shelf
-              </p>
-              <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl lg:text-4xl text-amber-950 leading-snug">
-                Water as part of the mise-en-scène.
-              </h2>
-              <p className="text-sm sm:text-base text-amber-900/80 leading-relaxed font-['Inter']">
-                Every Nishant Waters bottle begins as a quiet sketch — a band of color, a line of type, a hint of story. We calibrate label tones to sit softly against warm woods, linen, and concrete so they photograph beautifully in real light.
-              </p>
-              <p className="text-sm sm:text-base text-amber-900/80 leading-relaxed font-['Inter']">
-                Choose from our warm brandy palette, then refine typography, crests, and copy. Use it for suites and welcome trays, or as a small ritual before guests take their seats.
-              </p>
-              <div className="flex flex-wrap items-center gap-4 pt-1">
-                <div className="flex -space-x-1.5">
-                  <span className="h-7 w-7 rounded-full border border-amber-900/10" style={{ backgroundColor: BRANDY_PALETTE.creamSoft }} />
-                  <span className="h-7 w-7 rounded-full border border-amber-900/10" style={{ backgroundColor: BRANDY_PALETTE.amberLight }} />
-                  <span className="h-7 w-7 rounded-full border border-amber-900/10" style={{ backgroundColor: BRANDY_PALETTE.amber }} />
-                  <span className="h-7 w-7 rounded-full border border-amber-900/10" style={{ backgroundColor: BRANDY_PALETTE.amberDeep }} />
-                  <span className="h-7 w-7 rounded-full border border-amber-900/10" style={{ backgroundColor: BRANDY_PALETTE.sienna }} />
-                </div>
-                <p className="text-xs sm:text-sm text-amber-900/70 font-['Inter']">
-                  A considered palette of creams, ambers, and kiln-baked browns.
-                </p>
-              </div>
-              <div className="pt-2">
-                <Link
-                  to="/catalog"
-                  className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-amber-900/90 underline underline-offset-4 decoration-amber-500/70 hover:text-amber-950 hover:decoration-amber-700 transition-colors duration-200 font-['Inter']"
-                >
-                  Browse all bottles
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* REVIEWS SECTION (BRAND-LEVEL) */}
-      <section className="w-full bg-gradient-to-b from-[--nw-cream] via-[#f2e4d4] to-[--nw-creamSoft] py-16 sm:py-20 lg:py-24 border-t border-amber-900/10">
-        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12">
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-          >
-            <ReviewSection title="How hosts are pouring Nishant Waters" />
-          </motion.div>
-        </div>
-      </section>
-    </div>
-  );
+const ctaVariants = {
+  hover: { y: -1, boxShadow: "0 18px 40px rgba(40, 20, 10, 0.28)" },
+  tap: { y: 0, scale: 0.99 },
 };
 
-interface BottleMockProps {
-  labelColor: string;
-  labelName: string;
-  highlight?: boolean;
-}
+export const HomePage: React.FC<HomePageProps> = ({ onAddToCart }) => {
+  const navigate = useNavigate();
 
-const BottleMock: React.FC<BottleMockProps> = ({ labelColor, labelName, highlight }) => {
+  const products = React.useMemo(() => getProducts(), []);
+  const featured = products.filter(p => p.featured);
+  const fallback = products[0];
+  const heroProduct: Product | undefined = featured[0] ?? fallback;
+
+  const showcaseProducts: Product[] = React.useMemo(() => {
+    const pool = products.slice(0, 8);
+    if (!heroProduct) return pool;
+    return pool.filter(p => p.id !== heroProduct.id).slice(0, 6);
+  }, [products, heroProduct]);
+
+  const handlePrimaryCta = () => {
+    navigate("/shop");
+  };
+
+  const handleSecondaryCta = () => {
+    if (heroProduct) {
+      navigate(`/product/${heroProduct.slug}`);
+    }
+  };
+
+  const handleQuickAdd = (productId: string) => {
+    if (!onAddToCart) return;
+    const product = products.find(p => p.id === productId);
+    const firstVariant = product?.variants[0];
+    if (!product || !firstVariant) return;
+    onAddToCart(product.id, firstVariant.id);
+  };
+
   return (
-    <div className="relative flex h-full flex-col items-center justify-end pb-5">
-      {/* glass body */}
-      <div className="relative w-[54%] h-[78%] rounded-full bg-gradient-to-b from-white/75 via-white/20 to-white/5 shadow-[0_28px_60px_rgba(0,0,0,0.55)] overflow-hidden flex items-center justify-center">
-        {/* inner gradient to mimic water */}
-        <div className="absolute inset-[10%] rounded-full bg-gradient-to-b from-white/60 via-white/20 to-white/5" />
-        {/* label band */}
-        <div
-          className="relative w-[86%] h-[32%] rounded-[20px] shadow-md shadow-black/35 border border-white/60 flex flex-col items-center justify-center px-2 text-center"
-          style={{ backgroundColor: labelColor }}
-        >
-          <span className="text-[0.55rem] tracking-[0.3em] uppercase text-black/60 font-['Inter']">
-            Nishant Waters
-          </span>
-          <span className="mt-1 text-[0.7rem] text-black/80 font-['Playfair_Display'] leading-tight">
-            {labelName}
-          </span>
+    <motion.main
+      initial="hidden"
+      animate="enter"
+      variants={pageVariants}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full min-h-screen bg-[#0f0b08] text-[#f6eee5]"
+    >
+      {/* HERO */}
+      <section className="relative w-full min-h-[80vh] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a120d] via-[#20130f] to-[#4b2b1a]" />
+        {/* Texture overlay */}
+        <div className="pointer-events-none absolute inset-0 opacity-50 mix-blend-soft-light" aria-hidden="true">
+          <div className="h-full w-full bg-[radial-gradient(circle_at_0_0,rgba(255,255,255,0.09),transparent_55%),radial-gradient(circle_at_100%_0,rgba(255,255,255,0.12),transparent_55%),radial-gradient(circle_at_50%_90%,rgba(0,0,0,0.45),transparent_60%)]" />
         </div>
-      </div>
-      {/* neck */}
-      <div className="mt-[-6%] h-[16%] w-[18%] rounded-t-full rounded-b-[40%] bg-gradient-to-b from-white/85 via-white/60 to-white/10 shadow-[0_10px_18px_rgba(0,0,0,0.35)]" />
-      {/* cap */}
-      <div className="mt-[-2%] h-[7%] w-[26%] rounded-[6px] bg-gradient-to-b from-amber-900/90 via-amber-900 to-black/80 shadow-[0_6px_12px_rgba(0,0,0,0.5)]" />
-      {highlight && (
-        <div className="absolute -top-4 right-3 rounded-full bg-amber-200/95 px-2 py-1 shadow-md shadow-black/40">
-          <span className="text-[0.6rem] font-medium tracking-[0.14em] uppercase text-amber-900 font-['Inter']">
-            Most selected
-          </span>
+
+        <div className="relative z-10 w-full px-6 lg:px-12 py-16 lg:py-24">
+          <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-12 lg:gap-20 items-center">
+            {/* Text column */}
+            <motion.div variants={heroTextVariants}>
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#f4e2c4]/20 bg-[#1a120d]/60 px-4 py-1 text-xs tracking-[0.25em] uppercase text-[#f4e2c4]/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#c87a3b]" />
+                Custom labeled water, quietly exquisite
+              </p>
+
+              <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tight text-[#f8f0e4]">
+                Water that
+                <br className="hidden sm:block" />
+                <span className="ml-1 bg-gradient-to-r from-[#f5dfc4] via-[#e1b47a] to-[#c37e3c] bg-clip-text text-transparent">
+                  belongs on your table.
+                </span>
+              </h1>
+
+              <p className="mt-6 max-w-2xl text-base sm:text-lg text-[#f4e2c4]/85 font-light">
+                Nishant Waters wraps still and sparkling bottles in warm brandy-toned labels, designed to carry your logotype,
+                monogram, or a single considered line of text. Built for restaurants, studios, and spaces that care about every detail.
+              </p>
+
+              {heroProduct && (
+                <div className="mt-8 flex flex-wrap items-center gap-6">
+                  <motion.div
+                    variants={ctaVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                    className="inline-flex"
+                  >
+                    <Button
+                      onClick={handlePrimaryCta}
+                      className="group relative inline-flex items-center gap-2 rounded-full bg-[#c87a3b] px-7 py-2.5 text-sm font-medium tracking-wide text-[#1a120d] shadow-[0_16px_45px_rgba(0,0,0,0.35)] hover:bg-[#d48842] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a120d] focus-visible:ring-[#f5dfc4] transition-colors"
+                    >
+                      Browse the collection
+                      <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
+                    </Button>
+                  </motion.div>
+
+                  <button
+                    type="button"
+                    onClick={handleSecondaryCta}
+                    className="group inline-flex items-center gap-2 rounded-full border border-[#f4e2c4]/35 bg-transparent px-4 py-2 text-xs sm:text-sm font-medium tracking-wide text-[#f4e2c4]/90 hover:bg-[#f4e2c4]/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5dfc4] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a120d] transition-colors"
+                  >
+                    Explore {heroProduct.name}
+                    <span className="h-1 w-10 rounded-full bg-gradient-to-r from-transparent via-[#f4e2c4]/80 to-transparent opacity-60 transition group-hover:opacity-100" />
+                  </button>
+                </div>
+              )}
+
+              {heroProduct && (
+                <div className="mt-8 flex flex-wrap items-center gap-6 text-xs sm:text-sm text-[#f4e2c4]/75">
+                  <div className="flex items-center gap-2">
+                    <Droplets className="h-4 w-4 text-[#f0d4ad]" />
+                    <span>
+                      Starting at {formatCurrency(heroProduct.variants[0]?.priceCents ?? 0)} per bottle
+                    </span>
+                  </div>
+                  <div className="h-3 w-px bg-[#f4e2c4]/30" />
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#f0d4ad]" />
+                    <span>Minimums built for intimate venues and studios</span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Image column */}
+            <motion.div
+              className="relative h-[360px] sm:h-[420px] md:h-[460px] lg:h-[520px] xl:h-[560px]"
+              variants={heroImageVariants}
+            >
+              <div className="pointer-events-none absolute inset-0 rounded-[3.5rem] border border-[#f4e2c4]/15 bg-gradient-to-b from-[#f4e2c4]/6 via-[#1a120d]/20 to-[#1a120d]/70 shadow-[0_40px_140px_rgba(0,0,0,0.72)] backdrop-blur-[26px]" />
+
+              <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden rounded-[3.5rem]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0,rgba(244,219,186,0.25),transparent_60%),radial-gradient(circle_at_90%_10%,rgba(181,106,60,0.6),transparent_55%)] mix-blend-screen" />
+
+                <div className="relative h-[130%] w-auto translate-y-6">
+                  {/* Oversized bottle silhouette using gradients if actual image missing */}
+                  <div className="relative mx-auto flex h-full w-[160px] sm:w-[190px] md:w-[220px] items-center justify-center">
+                    <div className="absolute inset-x-10 bottom-0 top-6 rounded-[90px] bg-gradient-to-b from-[#fdf4e7]/80 via-[#f2dfc0]/60 to-[#c37e3c]/80 shadow-[0_38px_80px_rgba(0,0,0,0.65)]" />
+                    <div className="absolute inset-x-16 top-8 bottom-16 rounded-[60px] bg-gradient-to-b from-[#fdf4e7]/95 via-[#f3e1c4]/80 to-[#f0dcb9]/65" />
+                    <div className="absolute inset-x-18 top-[30%] bottom-[26%] rounded-[40px] border border-[#c87a3b]/40 bg-gradient-to-br from-[#c87a3b]/90 via-[#b56a3c]/85 to-[#3f2a23]/95 shadow-[0_12px_40px_rgba(0,0,0,0.6)]" />
+                    <div className="absolute inset-x-[22%] top-[34%] bottom-[30%] rounded-[34px] border border-[#f4e2c4]/12 bg-[linear-gradient(to_bottom,rgba(244,226,196,0.5),rgba(244,226,196,0.06)),radial-gradient(circle_at_30%_0,rgba(255,255,255,0.52),transparent_55%)] mix-blend-soft-light" />
+                    <div className="absolute inset-x-[24%] top-[31%] bottom-[67%] rounded-[32px] bg-gradient-to-b from-[#1a120d] via-[#3f2a23] to-[#f4e2c4]/40 shadow-[0_24px_45px_rgba(0,0,0,0.75)]" />
+                    <div className="absolute inset-x-[32%] top-[66%] bottom-[10%] rounded-full bg-[#121212]/80 blur-[22px] opacity-80" />
+                  </div>
+                </div>
+
+                {heroProduct && (
+                  <div className="pointer-events-none absolute inset-x-8 bottom-8 flex justify-between text-[11px] text-[#f4e2c4]/80">
+                    <div>
+                      <p className="font-medium uppercase tracking-[0.2em] text-[#f5dfc4]">Featured label</p>
+                      <p className="mt-1 font-['Playfair_Display'] text-base">{heroProduct.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p>{heroProduct.variants[0]?.sizeMl ?? 500}ml glass</p>
+                      <p>{heroProduct.variants[0]?.capColor}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         </div>
-      )}
-    </div>
+      </section>
+
+      {/* VALUE STRIP */}
+      <section className="w-full border-y border-[#f4e2c4]/12 bg-[#160f0b] px-6 lg:px-12 py-10">
+        <div className="w-full max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
+          <Card className="group relative border-[#f4e2c4]/15 bg-gradient-to-b from-[#21140f] via-[#160f0b] to-[#160f0b] text-[#f6eee5] shadow-[0_18px_55px_rgba(0,0,0,0.65)]">
+            <CardHeader className="flex flex-row items-center gap-4 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c87a3b]/15 text-[#f5dfc4]">
+                <Droplets className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="font-['Playfair_Display'] text-lg tracking-tight">Table-first silhouettes</CardTitle>
+                <CardDescription className="text-[#f4e2c4]/75 text-xs">
+                  Proportions tuned for linen, stoneware, and low light.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 text-sm text-[#f4e2c4]/85">
+              From compact 330ml welcome bottles to tall 750ml sparkling, each vessel is designed to feel collected, not branded.
+            </CardContent>
+          </Card>
+
+          <Card className="group relative border-[#f4e2c4]/15 bg-gradient-to-b from-[#23150f] via-[#160f0b] to-[#160f0b] text-[#f6eee5] shadow-[0_18px_55px_rgba(0,0,0,0.65)]">
+            <CardHeader className="flex flex-row items-center gap-4 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8c595]/15 text-[#f5dfc4]">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="font-['Playfair_Display'] text-lg tracking-tight">Label as canvas</CardTitle>
+                <CardDescription className="text-[#f4e2c4]/75 text-xs">
+                  Your logotype, monogram, or a single line of text.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 text-sm text-[#f4e2c4]/85">
+              A curated palette of smoked ivories and amber tones keeps your brand present but quiet, in both daylight and candlelight.
+            </CardContent>
+          </Card>
+
+          <Card className="group relative border-[#f4e2c4]/15 bg-gradient-to-b from-[#24170f] via-[#160f0b] to-[#160f0b] text-[#f6eee5] shadow-[0_18px_55px_rgba(0,0,0,0.65)]">
+            <CardHeader className="flex flex-row items-center gap-4 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#b56a3c]/18 text-[#f5dfc4]">
+                <Leaf className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="font-['Playfair_Display'] text-lg tracking-tight">Considered sourcing</CardTitle>
+                <CardDescription className="text-[#f4e2c4]/75 text-xs">
+                  Still and sparkling, bottled for low-impact programs.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 text-sm text-[#f4e2c4]/85">
+              This is a fully mocked frontend experience, but built to mirror a future supply chain that prioritizes thoughtful materials.
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* PRODUCT SHOWCASE */}
+      <section className="w-full bg-[#0f0b08] px-6 lg:px-12 py-14 lg:py-18">
+        <div className="w-full max-w-[1600px] mx-auto">
+          <div className="flex flex-col gap-4 mb-10 lg:mb-12">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs tracking-[0.25em] uppercase text-[#f4e2c4]/70">The collection</p>
+                <h2 className="mt-2 font-['Playfair_Display'] text-3xl sm:text-4xl tracking-tight text-[#f8f0e4]">
+                  Bottles for rooms that notice the water.
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={handlePrimaryCta}
+                className="inline-flex items-center gap-2 rounded-full border border-[#f4e2c4]/30 bg-[#160f0b] px-4 py-2 text-xs sm:text-sm font-medium text-[#f4e2c4]/90 hover:bg-[#1d120c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5dfc4] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0b08] transition-colors"
+              >
+                View all pieces
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <p className="max-w-3xl text-sm sm:text-base text-[#f4e2c4]/80">
+              Each mock product below is fully interactive within this frontend. Add to cart, adjust quantities, and explore label
+              customization—all persisted locally in your browser only.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-[minmax(240px,auto)] gap-5 lg:gap-6">
+            {showcaseProducts.map((product, index) => {
+              const isTall = index === 0 || index === 3;
+              const isWide = index === 1 || index === 4;
+
+              const colSpan =
+                index === 0
+                  ? "md:col-span-5"
+                  : index === 1
+                  ? "md:col-span-7"
+                  : index === 2
+                  ? "md:col-span-4"
+                  : index === 3
+                  ? "md:col-span-4"
+                  : index === 4
+                  ? "md:col-span-4"
+                  : "md:col-span-4";
+
+              const rowSpan = isTall ? "md:row-span-2" : "";
+
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                  className={`${colSpan} ${rowSpan} flex`}
+                >
+                  <div
+                    className={`flex w-full flex-col rounded-3xl border border-[#f4e2c4]/12 bg-gradient-to-b from-[#1a120d] via-[#120c09] to-[#0f0b08] p-4 sm:p-5 lg:p-6 shadow-[0_18px_60px_rgba(0,0,0,0.75)] ${
+                      isWide ? "md:flex-row" : "md:flex-col"
+                    } gap-4 md:gap-5`}
+                  >
+                    <div className={`${isWide ? "md:w-1/2" : "w-full"}`}>
+                      <ProductCard product={product} onAddToCart={handleQuickAdd} />
+                    </div>
+
+                    <div
+                      className={`${
+                        isWide
+                          ? "md:w-1/2 flex flex-col justify-between"
+                          : "w-full mt-2 flex flex-col justify-between"
+                      } text-xs sm:text-sm text-[#f4e2c4]/80`}
+                    >
+                      <p className="font-light">
+                        {product.shortDescription}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+                        {product.tags.map(tag => (
+                          <span
+                            key={tag}
+                            className="inline-flex rounded-full border border-[#f4e2c4]/20 bg-[#160f0b]/80 px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f4e2c4]/75"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </motion.main>
   );
 };
 

@@ -1,323 +1,278 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, MapPin, Phone, Clock } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input, Textarea, Separator } from "@/components/ui/shadcn";
-import { submitContact } from "@/mock";
-import { showToastError, showToastSuccess } from "@/components/ToastProvider";
+import { Mail, Phone, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Input,
+  Textarea,
+  Button,
+  Separator,
+} from "@/components/ui/shadcn";
 
-const containerVariants = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-};
+export interface ContactPageProps {}
 
-const cardVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: "easeOut" },
-  },
-};
-
-interface FieldErrors {
-  name?: string;
-  email?: string;
-  message?: string;
-}
-
-const ContactPage: React.FC = () => {
+export const ContactPage: React.FC<ContactPageProps> = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validate = (): boolean => {
-    const nextErrors: FieldErrors = {};
-
-    if (!name.trim()) {
-      nextErrors.name = "Please share your name.";
-    }
-
-    if (!email.trim()) {
-      nextErrors.email = "An email helps us reply thoughtfully.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = "This email doesn’t look quite right.";
-    }
-
-    if (!message.trim()) {
-      nextErrors.message = "Tell us a little about what you have in mind.";
-    } else if (message.trim().length < 12) {
-      nextErrors.message = "A touch more detail will help us respond well.";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast.error("Please fill in all fields before sending.");
+      return;
+    }
 
     setIsSubmitting(true);
-    try {
-      // FRONTEND-ONLY MOCK: this uses a mocked submitContact in src/mock.ts
-      const result = await submitContact({ name, email, message });
-      if (!result.success) {
-        showToastError("We couldn’t send your note", result.message);
-        return;
-      }
 
-      showToastSuccess("Message sent", result.message ?? "Your message is now with our team.");
+    // Purely mocked submit for this frontend-only MVP – no backend is called.
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast.success("Message sent");
       setName("");
       setEmail("");
       setMessage("");
-      setErrors({});
-    } catch (err) {
-      showToastError("Something went wrong", "This is a purely mocked contact flow – please retry.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 700);
   };
 
   return (
-    <div className="w-full min-h-screen bg-[radial-gradient(circle_at_top,_#f7f1e8,_#f3e6d6)] text-stone-900">
-      {/* Hero / Intro */}
-      <section className="w-full pt-16 pb-10 md:pb-14 lg:pt-20 lg:pb-16">
-        <motion.div
-          className="w-full max-w-[1600px] mx-auto px-6 lg:px-12"
-          variants={containerVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
-            <div className="max-w-2xl">
-              <p className="text-xs tracking-[0.25em] uppercase text-stone-500 mb-4">Contact</p>
-              <h1
-                className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-stone-900 mb-4 font-['Playfair_Display']"
-              >
-                Quiet conversations,
-                <br className="hidden sm:block" /> loud impressions.
-              </h1>
-              <p className="text-base sm:text-lg leading-relaxed text-stone-700 max-w-xl">
-                Share a sketch of your event, property, or brand, and we&apos;ll help you dress the
-                simplest ritual—water—in a label that feels distinctly yours.
+    <main className="w-full min-h-screen bg-[rgb(20,15,11)] text-[rgb(245,237,228)]">
+      {/* Full-bleed banner */}
+      <section className="w-full min-h-[55vh] relative overflow-hidden bg-gradient-to-br from-[rgb(44,30,22)] via-[rgb(28,20,15)] to-[rgb(20,14,10)]">
+        <div className="pointer-events-none absolute inset-0 opacity-40 mix-blend-soft-light" aria-hidden="true">
+          <div className="absolute -inset-32 bg-[radial-gradient(circle_at_top,_rgba(213,151,93,0.55),_transparent_60%),_radial-gradient(circle_at_bottom,_rgba(120,74,43,0.85),_transparent_65%)]" />
+        </div>
+        <div className="relative w-full max-w-[1600px] mx-auto px-6 lg:px-12 py-20 lg:py-28 flex flex-col lg:flex-row gap-12 lg:gap-20 items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="flex-1 max-w-2xl"
+          >
+            <p className="uppercase tracking-[0.25em] text-xs md:text-sm text-[rgba(245,237,228,0.7)] mb-4">
+              Contact
+            </p>
+            <h1 className="font-['Playfair_Display'] text-4xl md:text-5xl lg:text-6xl leading-tight text-[rgb(244,226,207)] mb-6">
+              A quiet conversation
+              <br className="hidden md:block" /> about water.
+            </h1>
+            <p className="text-sm md:text-base text-[rgba(245,237,228,0.8)] max-w-xl">
+              Share a menu, a moodboard, or simply a date. Nishant Waters is built for
+              dining rooms, studios, and openings that think in textures and light.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.75, ease: "easeOut", delay: 0.15 }}
+            className="flex-1 max-w-md"
+          >
+            <div className="border border-[rgba(245,237,228,0.12)] bg-[rgba(23,16,12,0.9)]/90 backdrop-blur-md rounded-xl p-5 md:p-6 shadow-[0_22px_45px_rgba(0,0,0,0.55)]">
+              <p className="text-xs tracking-[0.2em] uppercase text-[rgba(245,237,228,0.7)] mb-4">
+                Studio dispatch
+              </p>
+              <p className="text-sm text-[rgba(245,237,228,0.85)]">
+                We respond thoughtfully to every note. For launches, collaborations, or
+                custom runs, include timelines and any references you love.
               </p>
             </div>
-            <div className="lg:text-right space-y-1 text-sm text-stone-600 max-w-sm">
-              <p>For collaborations, trade accounts or bespoke formats, write to us directly.</p>
-              <p className="font-medium text-stone-800">studio@nishantwaters.com</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Content section */}
+      <section className="w-full py-14 md:py-20 bg-[rgb(18,13,10)]">
+        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12 flex flex-col lg:flex-row gap-10 lg:gap-16 items-start">
+          {/* Contact form */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex-[1.1] w-full"
+          >
+            <Card className="bg-[rgb(24,17,13)] border-[rgba(245,237,228,0.12)] shadow-[0_20px_50px_rgba(0,0,0,0.55)]">
+              <CardHeader className="pb-4 md:pb-6">
+                <CardTitle className="font-['Playfair_Display'] text-2xl md:text-3xl text-[rgb(244,226,207)]">
+                  Tell us about your table
+                </CardTitle>
+                <CardDescription className="text-[rgba(245,237,228,0.7)] text-sm md:text-base">
+                  This is a mock contact form for the frontend-only experience. No email is
+                  actually sent, but your message is handled entirely in the browser.
+                </CardDescription>
+              </CardHeader>
+              <Separator className="bg-[rgba(245,237,228,0.08)]" />
+              <CardContent className="pt-6 md:pt-8">
+                <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="name"
+                      className="block text-xs font-medium tracking-[0.18em] uppercase text-[rgba(245,237,228,0.75)]"
+                    >
+                      Name
+                    </label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="How should we address you?"
+                      className="bg-[rgb(18,13,10)] border-[rgba(245,237,228,0.28)]/70 focus-visible:border-[rgb(199,137,86)] focus-visible:ring-[rgb(199,137,86)] text-[rgb(245,237,228)] placeholder:text-[rgba(245,237,228,0.45)] rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="email"
+                      className="block text-xs font-medium tracking-[0.18em] uppercase text-[rgba(245,237,228,0.75)]"
+                    >
+                      Email
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="studio@yourspace.com"
+                      className="bg-[rgb(18,13,10)] border-[rgba(245,237,228,0.28)]/70 focus-visible:border-[rgb(199,137,86)] focus-visible:ring-[rgb(199,137,86)] text-[rgb(245,237,228)] placeholder:text-[rgba(245,237,228,0.45)] rounded-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="message"
+                      className="block text-xs font-medium tracking-[0.18em] uppercase text-[rgba(245,237,228,0.75)]"
+                    >
+                      Message
+                    </label>
+                    <Textarea
+                      id="message"
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      placeholder="Share your setting, event date, quantities, or anything you feel matters."
+                      rows={6}
+                      className="bg-[rgb(18,13,10)] border-[rgba(245,237,228,0.28)]/70 focus-visible:border-[rgb(199,137,86)] focus-visible:ring-[rgb(199,137,86)] text-[rgb(245,237,228)] placeholder:text-[rgba(245,237,228,0.45)] rounded-lg resize-y min-h-[160px]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-[rgb(181,106,60)] text-[rgb(24,15,11)] text-sm font-medium tracking-[0.16em] uppercase hover:bg-[rgb(199,137,86)] disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
+                      {isSubmitting ? "Sending" : "Send message"}
+                    </Button>
+                    <p className="text-[11px] text-[rgba(245,237,228,0.6)] max-w-xs">
+                      We keep correspondence minimal and considered. This interaction is fully
+                      mocked and stored only in your browser.
+                    </p>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Contact details */}
+          <motion.aside
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+            className="flex-1 w-full max-w-md"
+          >
+            <div className="space-y-6 md:space-y-7">
+              <div>
+                <p className="uppercase tracking-[0.22em] text-[11px] text-[rgba(245,237,228,0.65)] mb-2">
+                  Studio
+                </p>
+                <h2 className="font-['Playfair_Display'] text-xl md:text-2xl text-[rgb(244,226,207)] mb-3">
+                  Nishant Waters Studio
+                </h2>
+                <p className="text-sm text-[rgba(245,237,228,0.78)] max-w-sm">
+                  Built as a frontend-only mock, Nishant Waters keeps every interaction on your
+                  device. Imagine this as the quiet inbox where projects begin.
+                </p>
+              </div>
+
+              <Separator className="bg-[rgba(245,237,228,0.08)]" />
+
+              <div className="space-y-5">
+                <div className="flex gap-3">
+                  <div className="mt-0.5 rounded-full bg-[rgba(181,106,60,0.12)] border border-[rgba(181,106,60,0.4)] p-2 text-[rgb(230,205,183)]">
+                    <Mail className="w-4 h-4" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[rgba(245,237,228,0.7)] mb-1">
+                      Email
+                    </p>
+                    <a
+                      href="mailto:studio@nishantwaters.mock"
+                      className="text-sm text-[rgb(240,216,192)] hover:text-[rgb(212,164,113)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(199,137,86)] rounded-sm"
+                    >
+                      studio@nishantwaters.mock
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="mt-0.5 rounded-full bg-[rgba(181,106,60,0.12)] border border-[rgba(181,106,60,0.4)] p-2 text-[rgb(230,205,183)]">
+                    <Phone className="w-4 h-4" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[rgba(245,237,228,0.7)] mb-1">
+                      Studio line
+                    </p>
+                    <p className="text-sm text-[rgba(245,237,228,0.8)]">
+                      +1 (000) 000-0000
+                    </p>
+                    <p className="text-[11px] text-[rgba(245,237,228,0.6)] mt-1">
+                      Weekdays, 10:00–16:00 PST
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="mt-0.5 rounded-full bg-[rgba(181,106,60,0.12)] border border-[rgba(181,106,60,0.4)] p-2 text-[rgb(230,205,183)]">
+                    <MapPin className="w-4 h-4" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[rgba(245,237,228,0.7)] mb-1">
+                      Correspondence
+                    </p>
+                    <p className="text-sm text-[rgba(245,237,228,0.8)] leading-relaxed">
+                      14 Brandy Lane
+                      <br />
+                      Warmth City, CA 00000
+                      <br />
+                      United States
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="bg-[rgba(245,237,228,0.08)]" />
+
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(245,237,228,0.6)]">
+                  Response cadence
+                </p>
+                <p className="text-[11px] text-[rgba(245,237,228,0.7)] max-w-sm">
+                  As this is a fully mocked frontend experience, responses are imagined only.
+                  In a live studio setting we typically reply within 1–2 business days.
+                </p>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.aside>
+        </div>
       </section>
-
-      {/* Body: form + sidebar */}
-      <section className="w-full pb-16 lg:pb-24">
-        <motion.div
-          className="w-full max-w-[1600px] mx-auto px-6 lg:px-12"
-          initial="initial"
-          animate="animate"
-          variants={containerVariants}
-          transition={{ delay: 0.05 }}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,_1.5fr)_minmax(0,_1fr)] gap-10 lg:gap-14 items-start">
-            {/* Contact form */}
-            <motion.div variants={cardVariants} initial="initial" animate="animate">
-              <Card className="border border-stone-200/80 bg-[#f7f1e8]/80 backdrop-blur-sm shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl sm:text-2xl font-semibold text-stone-900 font-['Playfair_Display']">
-                    Begin the conversation
-                  </CardTitle>
-                  <CardDescription className="text-sm text-stone-600">
-                    Tell us about your project, opening, or property. We typically respond within one
-                    business day.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="name"
-                        className="text-xs uppercase tracking-[0.2em] text-stone-600"
-                      >
-                        Name
-                      </label>
-                      <Input
-                        id="name"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Your name or studio"
-                        className={`bg-white/80 border-stone-300/80 focus-visible:ring-stone-500/70 focus-visible:border-stone-500/80 rounded-md text-sm ${
-                          errors.name ? "border-red-500/70" : ""
-                        }`}
-                      />
-                      {errors.name && (
-                        <p className="text-xs text-red-600 mt-0.5">{errors.name}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="email"
-                        className="text-xs uppercase tracking-[0.2em] text-stone-600"
-                      >
-                        Email
-                      </label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className={`bg-white/80 border-stone-300/80 focus-visible:ring-stone-500/70 focus-visible:border-stone-500/80 rounded-md text-sm ${
-                          errors.email ? "border-red-500/70" : ""
-                        }`}
-                      />
-                      {errors.email && (
-                        <p className="text-xs text-red-600 mt-0.5">{errors.email}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="message"
-                        className="text-xs uppercase tracking-[0.2em] text-stone-600"
-                      >
-                        Message
-                      </label>
-                      <Textarea
-                        id="message"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Share timing, quantities, and any visual references you&apos;re holding in mind."
-                        rows={6}
-                        className={`resize-none bg-white/80 border-stone-300/80 focus-visible:ring-stone-500/70 focus-visible:border-stone-500/80 rounded-md text-sm leading-relaxed ${
-                          errors.message ? "border-red-500/70" : ""
-                        }`}
-                      />
-                      {errors.message && (
-                        <p className="text-xs text-red-600 mt-0.5">{errors.message}</p>
-                      )}
-                    </div>
-
-                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                      <p className="text-xs text-stone-500 max-w-xs">
-                        This is a fully frontend mock — your message is stored only in your browser for
-                        this Nishant Waters preview experience.
-                      </p>
-                      <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="inline-flex items-center justify-center gap-2 rounded-full bg-[#b46a2b] hover:bg-[#914b1a] text-amber-50 px-6 py-2.5 text-sm font-medium tracking-wide shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? "Sending" : "Send message"}
-                        <Mail className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Sidebar: Address + FAQ */}
-            <motion.aside
-              className="space-y-6 lg:space-y-8"
-              variants={cardVariants}
-              initial="initial"
-              animate="animate"
-              transition={{ delay: 0.08 }}
-            >
-              <Card className="border border-stone-200/80 bg-[#f3e6d6]/80 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-stone-900 font-['Playfair_Display']">
-                    Studio details
-                  </CardTitle>
-                  <CardDescription className="text-xs text-stone-600">
-                    A small studio working quietly between hospitality, events, and identity.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-stone-700">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 mt-0.5 text-stone-700" />
-                    <div>
-                      <p className="font-medium text-stone-900">Nishant Waters Studio</p>
-                      <p className="text-stone-700">
-                        Brandy House
-                        <br />
-                        48 Stillwater Lane
-                        <br />
-                        New York, NY 10013
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-4 h-4 mt-0.5 text-stone-700" />
-                    <div>
-                      <p className="font-medium text-stone-900">Studio phone</p>
-                      <p className="text-stone-700">+1 (212) 555‑0174</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Mail className="w-4 h-4 mt-0.5 text-stone-700" />
-                    <div>
-                      <p className="font-medium text-stone-900">Project enquiries</p>
-                      <p className="text-stone-700">studio@nishantwaters.com</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-4 h-4 mt-0.5 text-stone-700" />
-                    <div>
-                      <p className="font-medium text-stone-900">Studio hours</p>
-                      <p className="text-stone-700">Monday–Friday, 10:00–18:00 EST</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-stone-200/80 bg-white/80 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-stone-900 font-['Playfair_Display']">
-                    A few quick answers
-                  </CardTitle>
-                  <CardDescription className="text-xs text-stone-600">
-                    A lightweight FAQ to help shape your note.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-stone-700">
-                  <div className="space-y-1.5">
-                    <p className="font-medium text-stone-900">
-                      What is the minimum order quantity?
-                    </p>
-                    <p className="text-stone-700">
-                      Each bottle has a different starting quantity, typically between 12 and 72 units.
-                      Share your ideal count and we&apos;ll suggest the best vessel.
-                    </p>
-                  </div>
-                  <Separator className="bg-stone-200/80" />
-                  <div className="space-y-1.5">
-                    <p className="font-medium text-stone-900">Can you match our brand colors?</p>
-                    <p className="text-stone-700">
-                      Our warm brandy palette is the starting point. For larger runs, we can work with
-                      your existing palette as an extension of the collection.
-                    </p>
-                  </div>
-                  <Separator className="bg-stone-200/80" />
-                  <div className="space-y-1.5">
-                    <p className="font-medium text-stone-900">Do you ship internationally?</p>
-                    <p className="text-stone-700">
-                      For this preview, shipping is simulated in your browser. In practice, we partner
-                      with logistics teams to coordinate global deliveries.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.aside>
-          </div>
-        </motion.div>
-      </section>
-    </div>
+    </main>
   );
 };
 

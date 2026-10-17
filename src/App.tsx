@@ -1,143 +1,121 @@
-import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
-import { AnimatePresence } from "framer-motion";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import HomePage from '@/pages/HomePage';
+import CatalogPage from '@/pages/CatalogPage';
+import ProductDetailPage from '@/pages/ProductDetailPage';
+import CheckoutPage from '@/pages/CheckoutPage';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
+import { addToCart, getCartItemCount } from '@/mock';
+import { toast } from 'sonner';
 
-import HomePage from "./pages/HomePage";
-import ShopPage from "./pages/ShopPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import AboutPage from "./pages/AboutPage";
-import ContactPage from "./pages/ContactPage";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import CartDrawer from "./components/CartDrawer";
-import {
-  CartItem,
-  loadCartFromStorage,
-  saveCartToStorage,
-  products,
-  updateCartItemQuantity,
-  removeCartItem,
-} from "@/mock";
+// Shared cart handler type used by low-level cart logic
+export type AddToCartHandler = (
+  productId: string,
+  variantId: string,
+  quantity?: number,
+  designId?: string,
+) => void;
 
-const App: React.FC = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+// Simple handler used by list/grid cards that only know productId
+export type SimpleAddToCartHandler = (productId: string) => void;
 
-  // Load cart from mock/localStorage once
-  useEffect(() => {
-    const stored = loadCartFromStorage();
-    if (stored && Array.isArray(stored)) {
-      setCart(stored);
+// Detailed handler used by product detail page that knows product, variant, etc.
+export interface ProductVariant {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  variants?: ProductVariant[];
+}
+
+export type DetailedAddToCartPayload = {
+  product: Product;
+  variant: ProductVariant;
+  quantity: number;
+  designId?: string;
+};
+
+export type DetailedAddToCartHandler = (
+  payload: DetailedAddToCartPayload,
+) => void;
+
+export default function App() {
+  // Core implementation that talks to the mock cart utilities
+  const handleAddToCart: AddToCartHandler = (
+    productId,
+    variantId,
+    quantity = 1,
+    _designId,
+  ) => {
+    const item = addToCart(productId, variantId, quantity);
+    if (item) {
+      toast.success('Added to cart', {
+        description: `You now have ${getCartItemCount()} item(s) in your cart.`,
+      });
+    } else {
+      toast.error('Unable to add to cart', {
+        description: 'That configuration is not available at the moment.',
+      });
     }
-  }, []);
-
-  // Persist cart via mock helper
-  useEffect(() => {
-    saveCartToStorage(cart);
-  }, [cart]);
-
-  const handleAddToCart = (item: CartItem) => {
-    setCart((prev) => {
-      const existingIndex = prev.findIndex(
-        (ci) =>
-          ci.productId === item.productId &&
-          ci.selectedSize === item.selectedSize &&
-          ci.selectedBottleColor === item.selectedBottleColor &&
-          ci.customLabel?.templateId === item.customLabel?.templateId &&
-          ci.customLabel?.customText === item.customLabel?.customText &&
-          ci.customLabel?.textColor === item.customLabel?.textColor &&
-          ci.customLabel?.font === item.customLabel?.font
-      );
-      if (existingIndex !== -1) {
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + item.quantity,
-        };
-        return updated;
-      }
-      return [...prev, item];
-    });
-    setIsCartOpen(true);
   };
 
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    setCart((prev) => updateCartItemQuantity(prev, id, quantity));
+  // Adapter for components that only pass a productId
+  const handleSimpleAddToCart: SimpleAddToCartHandler = (productId) => {
+    // Use a default variant id when only productId is known.
+    // The mock implementation is expected to resolve a sensible default.
+    handleAddToCart(productId, 'default');
   };
 
-  const handleRemoveItem = (id: string) => {
-    setCart((prev) => removeCartItem(prev, id));
+  // Adapter for components that pass a rich payload
+  const handleDetailedAddToCart: DetailedAddToCartHandler = ({
+    product,
+    variant,
+    quantity,
+    designId,
+  }) => {
+    handleAddToCart(product.id, variant.id, quantity, designId);
   };
 
-  const handleClearCart = () => {
-    setCart([]);
+  const handleOpenCart = () => {
+    // In this mock-only app we do not have a dedicated cart drawer.
+    // Redirect users to the checkout route instead.
+    window.location.href = '/checkout';
   };
-
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col bg-[#FFF5E1] text-[#333333]">
-        <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
-
-        <main className="flex-1">
-          <AnimatePresence mode="wait">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <HomePage products={products} onAddToCart={handleAddToCart} />
-                }
-              />
-              <Route path="/shop" element={<ShopPage products={products} />} />
-              <Route
-                path="/product/:id"
-                element={
-                  <ProductDetailPage
-                    products={products}
-                    onAddToCart={handleAddToCart}
-                  />
-                }
-              />
-              <Route
-                path="/checkout"
-                element={<CheckoutPage cart={cart} onClearCart={handleClearCart} />}
-              />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-            </Routes>
-          </AnimatePresence>
+      <div className="min-h-screen flex flex-col bg-background text-foreground antialiased selection:bg-primary/20">
+        {/* Global toast configuration is provided by ToastProvider; this is a safety fallback. */}
+        <Header onOpenCart={handleOpenCart} />
+        <main className="flex-1 w-full">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route
+              path="/shop"
+              element={<CatalogPage onAddToCart={handleSimpleAddToCart} />}
+            />
+            <Route
+              path="/product/:id"
+              element={
+                <ProductDetailPage onAddToCart={handleDetailedAddToCart} />
+              }
+            />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="*" element={<HomePage />} />
+          </Routes>
         </main>
-
         <Footer />
-
-        <CartDrawer
-          open={isCartOpen}
-          onOpenChange={setIsCartOpen}
-          items={cart}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-        />
-
-        {/* Global Sonner toaster for toasts across the app */}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: "#1F130C",
-              color: "#FFF5E1",
-              borderRadius: 9999,
-              border: "1px solid #CBA135",
-              boxShadow: "0 18px 45px rgba(12,7,3,0.6)",
-            },
-          }}
-        />
       </div>
     </BrowserRouter>
   );
-};
-
-export default App;
+}

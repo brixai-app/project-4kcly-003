@@ -1,733 +1,909 @@
-import React, { useSyncExternalStore } from "react";
+// src/mock.ts
+// Central mock data + client-side state for Nishant Waters
+// NOTE: This is a 100% frontend-only mock state layer. No backend calls are made.
 
-// ---------------------------------------------
-// NOTE: This entire file is a FRONTEND-ONLY MOCK
-// There is NO backend or real database.
-// All data is stored in-memory and synced to
-// browser localStorage to simulate persistence.
-// ---------------------------------------------
+// ----------------------
+// Type Definitions
+// ----------------------
 
-// ================ COLOR PALETTE ================
+export type ID = string;
 
-export const BRANDY_PALETTE = {
-  cream: "#f7f1e8",
-  creamSoft: "#f3e6d6",
-  amberLight: "#f2c29b",
-  amber: "#d28c45",
-  amberDeep: "#b46a2b",
-  sienna: "#914b1a",
-  cocoa: "#5b3420",
-  inkSoft: "#2b211a",
-} as const;
-
-export type BrandyColorKey = keyof typeof BRANDY_PALETTE;
-
-// Helper to expose label color options in a specific set
-export const LABEL_COLOR_KEYS: BrandyColorKey[] = [
-  "creamSoft",
-  "amberLight",
-  "amber",
-  "amberDeep",
-  "sienna",
-];
-
-// ================ HELPERS ================
-
-const STORAGE_KEY = "nishant-waters-state-v1";
-const SHIPPING_DRAFT_KEY = "nishant-waters-shipping-draft-v1";
-
-export const formatMoney = (value: number): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(value);
-};
-
-// Safe access to localStorage
-const safeStorage = {
-  getItem(key: string): string | null {
-    if (typeof window === "undefined") return null;
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem(key: string, value: string): void {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-      // ignore quota errors etc.
-    }
-  },
-  removeItem(key: string): void {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // noop
-    }
-  },
-};
-
-// Deterministic image URLs: simple textured placeholders
-// Using picsum.photos-like service style; keeps IDs stable.
-const bottleImage = (seed: number) =>
-  `https://images.pexels.com/photos/${seed}/pexels-photo-${seed}.jpeg?auto=compress&cs=tinysrgb&w=900&q=80`;
-
-// ================ TYPES ================
-
-export interface LabelColorOption {
-  id: string; // deterministic id
-  key: BrandyColorKey;
+export interface LabelPaletteColor {
+  id: ID;
   name: string;
   hex: string;
+  description?: string;
 }
 
-export interface ProductSKU {
-  id: string;
-  slug: string;
+export interface ProductVariant {
+  id: ID;
+  sizeMl: number; // 330, 500, 750, etc.
+  capColor: string; // e.g. "Matte Onyx", "Soft Champagne"
+  labelFinish: "Matte" | "Satin" | "Gloss";
+  priceCents: number;
+  stock: number;
+}
+
+export interface Product {
+  id: ID;
   name: string;
-  description: string;
+  slug: string;
   shortDescription: string;
-  price: number;
-  capacityMl: number;
-  minOrderQty: number;
-  imageUrl: string;
-  secondaryImageUrl?: string;
-  labelColors: LabelColorOption[];
-  featured?: boolean;
+  description: string;
+  heroImage: string;
+  gallery: string[];
+  baseColor: string; // hex for UI accents
+  labelPaletteIds: ID[]; // ids into LabelPaletteColor
+  variants: ProductVariant[];
+  tags: string[];
+  featured: boolean;
+}
+
+export interface LabelDesignTextConfig {
+  value: string;
+  fontFamily: "serif" | "sans";
+  size: number; // 12-40 px logical
+  align: "left" | "center" | "right";
+}
+
+export interface LabelDesign {
+  id: ID;
+  productId: ID;
+  backgroundColorId: ID; // from palette
+  textColorHex: string;
+  text: LabelDesignTextConfig;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
 }
 
 export interface CartItem {
-  id: string; // cart line id
-  productId: string;
+  id: ID;
+  productId: ID;
+  variantId: ID;
   quantity: number;
-  unitPrice: number;
-  labelColorId: string; // reference LabelColorOption.id
-  createdAt: string;
+  designId?: ID; // optional reference to LabelDesign snapshot
+  designSnapshot?: LabelDesign; // frozen design at time of add
+  linePriceCents: number; // unit price * qty at time of add
 }
 
-export interface Cart {
+export interface CartState {
   items: CartItem[];
 }
 
-export interface ShippingInfo {
+export interface Address {
   fullName: string;
   email: string;
   phone: string;
-  addressLine1: string;
-  addressLine2?: string;
+  line1: string;
+  line2?: string;
   city: string;
   state: string;
   postalCode: string;
   country: string;
 }
 
+export interface PaymentMock {
+  cardholderName: string;
+  cardLast4: string;
+  brand: string;
+}
+
+export interface OrderItem {
+  id: ID;
+  productId: ID;
+  variantId: ID;
+  quantity: number;
+  unitPriceCents: number;
+  lineTotalCents: number;
+  designSnapshot?: LabelDesign;
+}
+
+export type OrderStatus = "pending" | "confirmed" | "fulfilled" | "cancelled";
+
 export interface Order {
-  id: string;
-  orderNumber: string;
+  id: ID;
   createdAt: string;
-  items: CartItem[];
-  subtotal: number;
-  shipping: number;
-  total: number;
-  shippingInfo: ShippingInfo;
+  updatedAt: string;
+  items: OrderItem[];
+  subtotalCents: number;
+  shippingCents: number;
+  taxCents: number;
+  totalCents: number;
+  status: OrderStatus;
+  shippingAddress: Address;
+  payment: PaymentMock;
+}
+
+export interface User {
+  id: ID;
+  name: string;
+  email: string;
+  defaultAddress?: Address;
 }
 
 export interface Review {
-  id: string;
-  productId?: string; // undefined => brand-level review
-  name: string;
-  initials: string;
+  id: ID;
+  productId: ID;
+  userInitials: string;
+  userName: string;
   rating: number; // 1-5
   title: string;
-  comment: string;
+  body: string;
   createdAt: string;
 }
 
-export interface UserProfile {
-  id: string;
-  name: string;
-  email?: string;
-  isGuest: boolean;
-}
-
-export interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  createdAt: string;
+export interface Filters {
+  search?: string;
+  sizeMl?: number[]; // selected sizes
+  capColors?: string[];
+  labelFinishes?: ("Matte" | "Satin" | "Gloss")[];
+  paletteIds?: ID[];
 }
 
 export interface MockState {
-  products: ProductSKU[];
+  version: number;
+  products: Product[];
+  labelPalette: LabelPaletteColor[];
   reviews: Review[];
-  cart: Cart;
-  user: UserProfile | null;
+  cart: CartState;
+  labelDesigns: Record<ID, LabelDesign>; // keyed by productId (latest design)
   orders: Order[];
-  contactMessages: ContactMessage[];
+  user: User | null;
 }
 
-// ================ MOCK SEED DATA ================
+// ----------------------
+// Storage + Safe Access
+// ----------------------
 
-const createLabelOption = (
-  id: string,
-  key: BrandyColorKey,
-  name: string
-): LabelColorOption => ({
-  id,
-  key,
-  name,
-  hex: BRANDY_PALETTE[key],
-});
+const STORAGE_VERSION = 1;
+const STORAGE_KEY = `nishant-waters-state-v${STORAGE_VERSION}`;
 
-const BASE_LABEL_OPTIONS: LabelColorOption[] = [
-  createLabelOption("label-cream-soft", "creamSoft", "Soft Cream"),
-  createLabelOption("label-amber-light", "amberLight", "Honey Amber"),
-  createLabelOption("label-amber", "amber", "Brandy Gold"),
-  createLabelOption("label-amber-deep", "amberDeep", "Smoked Caramel"),
-  createLabelOption("label-sienna", "sienna", "Kiln Sienna"),
+const isBrowser =
+  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+
+const safeStorage = {
+  load(): Partial<MockState> | null {
+    if (!isBrowser) return null;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as Partial<MockState>;
+    } catch {
+      return null;
+    }
+  },
+  save(state: MockState) {
+    if (!isBrowser) return;
+    try {
+      const payload = JSON.stringify(state);
+      window.localStorage.setItem(STORAGE_KEY, payload);
+    } catch {
+      // ignore quota / serialization errors for this mock
+    }
+  },
+};
+
+// ----------------------
+// Utility Helpers
+// ----------------------
+
+export function createId(): ID {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substring(2, 11);
+}
+
+export function formatCurrency(
+  cents: number,
+  currency: string = "USD",
+  locale: string = "en-US",
+): string {
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 0,
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(0)}`;
+  }
+}
+
+// ----------------------
+// Mock Data (purely client-side)
+// ----------------------
+
+// NOTE: All of this is mocked data. In a real app this would come from an API.
+
+const LABEL_PALETTE: LabelPaletteColor[] = [
+  {
+    id: "amber-velvet",
+    name: "Amber Velvet",
+    hex: "#B56A3C",
+    description: "A deep brandy amber with soft warmth.",
+  },
+  {
+    id: "smoked-ivory",
+    name: "Smoked Ivory",
+    hex: "#E3D5C6",
+    description: "Subtle ivory with a whisper of smoke.",
+  },
+  {
+    id: "midnight-caramel",
+    name: "Midnight Caramel",
+    hex: "#3F2A23",
+    description: "Dark caramel for high-contrast labels.",
+  },
+  {
+    id: "linen-foam",
+    name: "Linen Foam",
+    hex: "#F4E9DD",
+    description: "Airy linen tone for minimal layouts.",
+  },
+  {
+    id: "burnt-citrus",
+    name: "Burnt Citrus",
+    hex: "#C16A32",
+    description: "Rich orange-brandy accent.",
+  },
+  {
+    id: "soft-cacao",
+    name: "Soft Cacao",
+    hex: "#8D5A3A",
+    description: "Balanced cacao with a velvety finish.",
+  },
 ];
 
-const seedProducts = (): ProductSKU[] => {
-  return [
-    {
-      id: "bottle-classic-500",
-      slug: "classic-glass-500ml",
-      name: "Classic Glass 500ml",
-      description:
-        "A slender glass bottle with a satin-brandy label band. Perfect for welcome amenities, boutique events, and turn-down service. Custom print your monogram, venue crest, or brand story in rich detail.",
-      shortDescription: "Slender glass with warm-brandy label band.",
-      price: 3.5,
-      capacityMl: 500,
-      minOrderQty: 48,
-      imageUrl: bottleImage(166041),
-      secondaryImageUrl: bottleImage(1458283),
-      labelColors: BASE_LABEL_OPTIONS,
-      featured: true,
-    },
-    {
-      id: "bottle-still-750",
-      slug: "still-reserve-750ml",
-      name: "Still Reserve 750ml",
-      description:
-        "Our tall signature silhouette designed for chef's tables and gallery openings. The label canvas stretches generously, welcoming layered typography and subtle metallic foils in warm tones.",
-      shortDescription: "Tall signature silhouette for chef's tables.",
-      price: 4.2,
-      capacityMl: 750,
-      minOrderQty: 24,
-      imageUrl: bottleImage(1458283),
-      secondaryImageUrl: bottleImage(166041),
-      labelColors: [
-        BASE_LABEL_OPTIONS[1],
-        BASE_LABEL_OPTIONS[2],
-        BASE_LABEL_OPTIONS[3],
-      ],
-      featured: true,
-    },
-    {
-      id: "bottle-sparkling-330",
-      slug: "sparkling-studio-330ml",
-      name: "Sparkling Studio 330ml",
-      description:
-        "A petite, effervescent-ready bottle ideal for gift boxes and turn-key press drops. The shorter label band adds a playful proportion without losing its editorial voice.",
-      shortDescription: "Petite sparkling-ready bottle for gift boxes.",
-      price: 3.1,
-      capacityMl: 330,
-      minOrderQty: 72,
-      imageUrl: bottleImage(939986),
-      secondaryImageUrl: bottleImage(681847),
-      labelColors: [
-        BASE_LABEL_OPTIONS[0],
-        BASE_LABEL_OPTIONS[1],
-        BASE_LABEL_OPTIONS[4],
-      ],
-    },
-    {
-      id: "bottle-alpine-1000",
-      slug: "alpine-carafe-1l",
-      name: "Alpine Carafe 1L",
-      description:
-        "A grounded, weighty form with a generous 1L capacity. Designed for suites, boardrooms, and galleries where water becomes part of the mise-en-scène.",
-      shortDescription: "Weighty 1L carafe for suites and galleries.",
-      price: 5.0,
-      capacityMl: 1000,
-      minOrderQty: 12,
-      imageUrl: bottleImage(681847),
-      secondaryImageUrl: bottleImage(939986),
-      labelColors: BASE_LABEL_OPTIONS,
-    },
-  ];
-};
-
-const seedReviews = (): Review[] => {
-  return [
-    {
-      id: "review-1",
-      productId: "bottle-classic-500",
-      name: "Maya Desai",
-      initials: "MD",
-      rating: 5,
-      title: "Quiet luxury at the table",
-      comment:
-        "Our hotel guests kept asking where the bottles were from. The labels photograph beautifully in low light, which has been a gift for our social team.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    },
-    {
-      id: "review-2",
-      productId: "bottle-still-750",
-      name: "Studio Aurelia",
-      initials: "SA",
-      rating: 5,
-      title: "Flawless for gallery openings",
-      comment:
-        "We wanted water bottles that felt considered, not afterthoughts. The warm brandy palette sits perfectly against white walls and raw concrete.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    },
-    {
-      id: "review-3",
-      productId: undefined,
-      name: "Casa Naya",
-      initials: "CN",
-      rating: 4,
-      title: "A small ritual for our guests",
-      comment:
-        "Nishant Waters has become part of our arrival ritual. The customization process was simple, and the samples matched exactly what we imagined.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
-    },
-    {
-      id: "review-4",
-      productId: "bottle-sparkling-330",
-      name: "Noir Atelier",
-      initials: "NA",
-      rating: 5,
-      title: "Press kits elevated",
-      comment:
-        "The petite bottles tucked perfectly into our press mailers. Even editors commented on the label color.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    },
-  ];
-};
-
-const seedUser = (): UserProfile => ({
-  id: "guest-user",
-  name: "Guest",
-  isGuest: true,
-});
-
-const seedState = (): MockState => ({
-  products: seedProducts(),
-  reviews: seedReviews(),
-  cart: { items: [] },
-  user: seedUser(),
-  orders: [],
-  contactMessages: [],
-});
-
-// ================ PERSISTENCE & STORE CORE ================
-
-let state: MockState = seedState();
-
-// Hydrate from localStorage if available
-const loadStateFromStorage = (): void => {
-  const raw = safeStorage.getItem(STORAGE_KEY);
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw) as Partial<MockState>;
-    const seeded = seedState();
-    state = {
-      products: seeded.products,
-      reviews: seeded.reviews,
-      cart: parsed.cart ?? seeded.cart,
-      user: parsed.user ?? seeded.user,
-      orders: parsed.orders ?? seeded.orders,
-      contactMessages: parsed.contactMessages ?? seeded.contactMessages,
-    };
-  } catch {
-    state = seedState();
-  }
-};
-
-loadStateFromStorage();
-
-const saveStateToStorage = (): void => {
-  const toPersist: Partial<MockState> = {
-    cart: state.cart,
-    user: state.user,
-    orders: state.orders,
-    contactMessages: state.contactMessages,
-  };
-  safeStorage.setItem(STORAGE_KEY, JSON.stringify(toPersist));
-};
-
-// Simple subscription model
-const listeners = new Set<() => void>();
-
-const emitChange = () => {
-  saveStateToStorage();
-  listeners.forEach((l) => l());
-};
-
-export const getSnapshot = (): MockState => state;
-
-export const subscribe = (listener: () => void): (() => void) => {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-};
-
-export function useMockStore<T>(selector: (state: MockState) => T): T {
-  return useSyncExternalStore(subscribe, () => selector(getSnapshot()));
-}
-
-// ================ SELECTORS & QUERIES ================
-
-export const listProducts = (): ProductSKU[] => state.products;
-
-export const getProductById = (productId: string): ProductSKU | undefined =>
-  state.products.find((p) => p.id === productId);
-
-export const filterByLabelColor = (
-  labelColorKey?: BrandyColorKey
-): ProductSKU[] => {
-  if (!labelColorKey) return state.products;
-  return state.products.filter((p) =>
-    p.labelColors.some((c) => c.key === labelColorKey)
-  );
-};
-
-export const getLabelColorById = (
-  id: string
-): LabelColorOption | undefined => {
-  for (const product of state.products) {
-    const match = product.labelColors.find((c) => c.id === id);
-    if (match) return match;
-  }
-  return undefined;
-};
-
-export const getProductReviews = (productId?: string): Review[] => {
-  if (!productId) return state.reviews.filter((r) => !r.productId);
-  return state.reviews.filter((r) => r.productId === productId);
-};
-
-// ================ CART OPERATIONS ================
-
-const findCartItemIndex = (
-  productId: string,
-  labelColorId: string
-): number => {
-  return state.cart.items.findIndex(
-    (item) => item.productId === productId && item.labelColorId === labelColorId
-  );
-};
-
-export const addToCart = (params: {
-  productId: string;
-  quantity?: number;
-  labelColorId: string;
-}): CartItem | null => {
-  const { productId, quantity = 1, labelColorId } = params;
-  const product = getProductById(productId);
-  if (!product || quantity <= 0) return null;
-
-  const existingIndex = findCartItemIndex(productId, labelColorId);
-  const now = new Date().toISOString();
-
-  if (existingIndex !== -1) {
-    const existing = state.cart.items[existingIndex];
-    const updated: CartItem = {
-      ...existing,
-      quantity: existing.quantity + quantity,
-    };
-    state = {
-      ...state,
-      cart: {
-        ...state.cart,
-        items: [
-          ...state.cart.items.slice(0, existingIndex),
-          updated,
-          ...state.cart.items.slice(existingIndex + 1),
-        ],
+const PRODUCTS: Product[] = [
+  {
+    id: "bottle-amber-500",
+    name: "Amber Table 500",
+    slug: "amber-table-500",
+    shortDescription:
+      "500ml glass bottle with warm amber label, ideal for dining rooms and boutique events.",
+    description:
+      "Amber Table 500 is designed for intimate gatherings, tasting rooms, and boutique hotels. Each bottle elevates water service with a warm amber label that feels at home beside stone, linen, and candlelight.",
+    heroImage: "/images/amber-table-500-hero.jpg",
+    gallery: [
+      "/images/amber-table-500-1.jpg",
+      "/images/amber-table-500-2.jpg",
+      "/images/amber-table-500-3.jpg",
+    ],
+    baseColor: "#B56A3C",
+    labelPaletteIds: ["amber-velvet", "smoked-ivory", "linen-foam", "soft-cacao"],
+    variants: [
+      {
+        id: "bottle-amber-500-matte-bronze",
+        sizeMl: 500,
+        capColor: "Matte Bronze",
+        labelFinish: "Matte",
+        priceCents: 480,
+        stock: 120,
       },
-    };
-    emitChange();
-    return updated;
-  }
+      {
+        id: "bottle-amber-500-satin-champagne",
+        sizeMl: 500,
+        capColor: "Soft Champagne",
+        labelFinish: "Satin",
+        priceCents: 520,
+        stock: 80,
+      },
+    ],
+    tags: ["glass", "amber", "table-service"],
+    featured: true,
+  },
+  {
+    id: "bottle-clear-750",
+    name: "Midnight Mineral 750",
+    slug: "midnight-mineral-750",
+    shortDescription:
+      "Tall 750ml bottle with smoked label for tasting menus and curated wine pairings.",
+    description:
+      "Midnight Mineral 750 pairs clean glass with a smoked label field, keeping the focus on the table while quietly branding each pour. Perfect for progressive restaurants and gallery events.",
+    heroImage: "/images/midnight-mineral-750-hero.jpg",
+    gallery: [
+      "/images/midnight-mineral-750-1.jpg",
+      "/images/midnight-mineral-750-2.jpg",
+    ],
+    baseColor: "#3F2A23",
+    labelPaletteIds: ["midnight-caramel", "smoked-ivory", "linen-foam"],
+    variants: [
+      {
+        id: "bottle-clear-750-matte-onyx",
+        sizeMl: 750,
+        capColor: "Matte Onyx",
+        labelFinish: "Matte",
+        priceCents: 620,
+        stock: 60,
+      },
+      {
+        id: "bottle-clear-750-gloss-onyx",
+        sizeMl: 750,
+        capColor: "Matte Onyx",
+        labelFinish: "Gloss",
+        priceCents: 670,
+        stock: 40,
+      },
+    ],
+    tags: ["glass", "tasting", "smoked"],
+    featured: true,
+  },
+  {
+    id: "bottle-still-330",
+    name: "Studio Still 330",
+    slug: "studio-still-330",
+    shortDescription:
+      "Compact 330ml still water for studios, salons, and guest welcome trays.",
+    description:
+      "Studio Still 330 is proportioned for welcome trays, turn-down service, and curated studios. Soft cacao and linen tones can be tailored with your logotype or seasonal message.",
+    heroImage: "/images/studio-still-330-hero.jpg",
+    gallery: [
+      "/images/studio-still-330-1.jpg",
+      "/images/studio-still-330-2.jpg",
+      "/images/studio-still-330-3.jpg",
+    ],
+    baseColor: "#8D5A3A",
+    labelPaletteIds: ["soft-cacao", "linen-foam", "burnt-citrus"],
+    variants: [
+      {
+        id: "bottle-still-330-matte-sand",
+        sizeMl: 330,
+        capColor: "Soft Sand",
+        labelFinish: "Matte",
+        priceCents: 380,
+        stock: 200,
+      },
+      {
+        id: "bottle-still-330-satin-sand",
+        sizeMl: 330,
+        capColor: "Soft Sand",
+        labelFinish: "Satin",
+        priceCents: 420,
+        stock: 160,
+      },
+    ],
+    tags: ["still", "compact", "welcome"],
+    featured: true,
+  },
+  {
+    id: "bottle-sparkling-750",
+    name: "Brandy Spark 750",
+    slug: "brandy-spark-750",
+    shortDescription:
+      "Sparkling 750ml with luminous amber label for celebrations and launches.",
+    description:
+      "Brandy Spark 750 brings a subtle glow to sparkling service. Pair with metallic caps and a luminous amber label for launches, openings, and celebrations that deserve a considered detail.",
+    heroImage: "/images/brandy-spark-750-hero.jpg",
+    gallery: [
+      "/images/brandy-spark-750-1.jpg",
+      "/images/brandy-spark-750-2.jpg",
+    ],
+    baseColor: "#C16A32",
+    labelPaletteIds: ["burnt-citrus", "amber-velvet", "smoked-ivory"],
+    variants: [
+      {
+        id: "bottle-sparkling-750-satin-gold",
+        sizeMl: 750,
+        capColor: "Brushed Gold",
+        labelFinish: "Satin",
+        priceCents: 720,
+        stock: 90,
+      },
+      {
+        id: "bottle-sparkling-750-gloss-gold",
+        sizeMl: 750,
+        capColor: "Brushed Gold",
+        labelFinish: "Gloss",
+        priceCents: 780,
+        stock: 50,
+      },
+    ],
+    tags: ["sparkling", "celebration"],
+    featured: false,
+  },
+];
 
-  const newItem: CartItem = {
-    id: `cart-${Math.random().toString(36).slice(2, 9)}`,
-    productId,
-    quantity,
-    unitPrice: product.price,
-    labelColorId,
-    createdAt: now,
-  };
+const MOCK_REVIEWS: Review[] = [
+  {
+    id: createId(),
+    productId: "bottle-amber-500",
+    userInitials: "LA",
+    userName: "Lena / Atelier North",
+    rating: 5,
+    title: "The bottles feel like part of our tablescape",
+    body:
+      "Clients keep asking where the bottles are from. The amber label sits quietly next to stoneware and linen, exactly as we hoped.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: createId(),
+    productId: "bottle-clear-750",
+    userInitials: "MB",
+    userName: "Marco / Birch Dining",
+    rating: 4,
+    title: "Smoked labels, clean impression",
+    body:
+      "We use Midnight Mineral on our pairing menu. The smoked label photographs beautifully under low light without stealing focus.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: createId(),
+    productId: "bottle-still-330",
+    userInitials: "CR",
+    userName: "Clare / Room 14",
+    rating: 5,
+    title: "Perfect welcome gesture",
+    body:
+      "Studio Still sits on our turn-down trays with a simple line of text. It quietly says we thought about every detail.",
+    createdAt: new Date().toISOString(),
+  },
+];
 
-  state = {
-    ...state,
-    cart: {
-      ...state.cart,
-      items: [...state.cart.items, newItem],
-    },
-  };
-  emitChange();
-  return newItem;
+const MOCK_USER: User = {
+  id: "mock-user-1",
+  name: "Nishant Waters Studio",
+  email: "studio@nishantwaters.mock",
+  defaultAddress: {
+    fullName: "Nishant Waters Studio",
+    email: "studio@nishantwaters.mock",
+    phone: "+1 (000) 000-0000",
+    line1: "14 Brandy Lane",
+    city: "Warmth City",
+    state: "CA",
+    postalCode: "00000",
+    country: "United States",
+  },
 };
 
-export const updateCartItemQuantity = (
-  cartItemId: string,
-  quantity: number
-): void => {
-  if (quantity <= 0) {
-    removeCartItem(cartItemId);
-    return;
-  }
-  const idx = state.cart.items.findIndex((i) => i.id === cartItemId);
-  if (idx === -1) return;
-  const item = state.cart.items[idx];
-  const updated: CartItem = { ...item, quantity };
-  state = {
-    ...state,
-    cart: {
-      ...state.cart,
-      items: [
-        ...state.cart.items.slice(0, idx),
-        updated,
-        ...state.cart.items.slice(idx + 1),
-      ],
-    },
-  };
-  emitChange();
-};
+// ----------------------
+// Initial State
+// ----------------------
 
-export const removeCartItem = (cartItemId: string): void => {
-  state = {
-    ...state,
-    cart: {
-      ...state.cart,
-      items: state.cart.items.filter((i) => i.id !== cartItemId),
-    },
-  };
-  emitChange();
-};
+function createInitialState(): MockState {
+  const persisted = safeStorage.load();
 
-export const clearCart = (): void => {
-  state = {
-    ...state,
+  const baseState: MockState = {
+    version: STORAGE_VERSION,
+    products: PRODUCTS,
+    labelPalette: LABEL_PALETTE,
+    reviews: MOCK_REVIEWS,
     cart: { items: [] },
+    labelDesigns: {},
+    orders: [],
+    user: MOCK_USER,
   };
-  emitChange();
-};
 
-export const getCartSubtotal = (): number => {
-  return state.cart.items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-};
+  if (!persisted) return baseState;
 
-// ================ CHECKOUT & SHIPPING ================
-
-export interface ShippingValidationResult {
-  valid: boolean;
-  errors: Partial<Record<keyof ShippingInfo, string>>;
+  // Merge persisted with base data; prefer latest product catalog definition
+  return {
+    ...baseState,
+    ...persisted,
+    products: baseState.products,
+    labelPalette: baseState.labelPalette,
+    reviews: baseState.reviews,
+    version: STORAGE_VERSION,
+  };
 }
 
-export const validateShipping = (
-  info: ShippingInfo
-): ShippingValidationResult => {
-  const errors: Partial<Record<keyof ShippingInfo, string>> = {};
+let state: MockState = createInitialState();
 
-  if (!info.fullName.trim()) errors.fullName = "Please enter a full name.";
+// Subscribers for simple observer pattern
+const subscribers = new Set<() => void>();
 
-  if (!info.email.trim()) {
-    errors.email = "Please enter an email address.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(info.email)) {
-    errors.email = "Please enter a valid email address.";
+function notify() {
+  for (const sub of subscribers) {
+    try {
+      sub();
+    } catch {
+      // ignore subscriber errors in mock
+    }
   }
-
-  if (!info.phone.trim()) errors.phone = "Please add a contact number.";
-  if (!info.addressLine1.trim()) errors.addressLine1 = "Address is required.";
-  if (!info.city.trim()) errors.city = "City is required.";
-  if (!info.state.trim()) errors.state = "State is required.";
-  if (!info.postalCode.trim()) errors.postalCode = "Postal code is required.";
-  if (!info.country.trim()) errors.country = "Country is required.";
-
-  return { valid: Object.keys(errors).length === 0, errors };
-};
-
-export const saveShippingDraft = (info: ShippingInfo): void => {
-  safeStorage.setItem(SHIPPING_DRAFT_KEY, JSON.stringify(info));
-};
-
-export const loadShippingDraft = (): ShippingInfo | null => {
-  const raw = safeStorage.getItem(SHIPPING_DRAFT_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as ShippingInfo;
-  } catch {
-    return null;
-  }
-};
-
-export const clearShippingDraft = (): void => {
-  safeStorage.removeItem(SHIPPING_DRAFT_KEY);
-};
-
-const computeOrderTotals = (items: CartItem[]): {
-  subtotal: number;
-  shipping: number;
-  total: number;
-} => {
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-  // Simple flat shipping logic for mock: free over $250
-  const shipping = subtotal === 0 ? 0 : subtotal >= 250 ? 0 : 24; // flat 24 USD
-  const total = subtotal + shipping;
-  return { subtotal, shipping, total };
-};
-
-export const placeOrder = (shippingInfo: ShippingInfo): Order | null => {
-  if (state.cart.items.length === 0) return null;
-
-  const validation = validateShipping(shippingInfo);
-  if (!validation.valid) return null;
-
-  const { subtotal, shipping, total } = computeOrderTotals(state.cart.items);
-  const now = new Date();
-  const orderId = `ord-${Math.random().toString(36).slice(2, 10)}`;
-  const orderNumber = `NW-${now.getFullYear()}${(now.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}-${Math.floor(Math.random() * 9000 + 1000)}`;
-
-  const order: Order = {
-    id: orderId,
-    orderNumber,
-    createdAt: now.toISOString(),
-    items: [...state.cart.items],
-    subtotal,
-    shipping,
-    total,
-    shippingInfo,
-  };
-
-  state = {
-    ...state,
-    orders: [order, ...state.orders],
-    cart: { items: [] },
-  };
-  emitChange();
-  clearShippingDraft();
-
-  return order;
-};
-
-export const listOrders = (): Order[] => state.orders;
-
-// ================ CONTACT MOCK ================
-
-export interface ContactSubmitResult {
-  success: boolean;
-  message?: string;
 }
 
-export const submitContact = async (input: {
-  name: string;
-  email: string;
-  message: string;
-}): Promise<ContactSubmitResult> => {
-  // purely client-side mock of network + persistence
-  const { name, email, message } = input;
+// ----------------------
+// Core State Accessors
+// ----------------------
 
-  if (!name.trim() || !email.trim() || !message.trim()) {
-    return {
-      success: false,
-      message: "Please complete all fields.",
-    };
-  }
+export function getState(): MockState {
+  return state;
+}
 
-  // Basic email pattern validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return {
-      success: false,
-      message: "Please enter a valid email address.",
-    };
-  }
-
-  // Simulated latency
-  await new Promise((resolve) => setTimeout(resolve, 600));
-
-  const id = `contact-${Math.random().toString(36).slice(2, 9)}`;
-  const createdAt = new Date().toISOString();
-  const record: ContactMessage = { id, name, email, message, createdAt };
-
-  state = {
-    ...state,
-    contactMessages: [record, ...state.contactMessages],
+export function subscribe(listener: () => void): () => void {
+  subscribers.add(listener);
+  return () => {
+    subscribers.delete(listener);
   };
-  emitChange();
+}
+
+export function setState(partial: Partial<MockState>): void {
+  state = { ...state, ...partial };
+  safeStorage.save(state);
+  notify();
+}
+
+// ----------------------
+// Product + Review Helpers
+// ----------------------
+
+export function getProducts(): Product[] {
+  return state.products;
+}
+
+export function getProductById(productId: ID): Product | undefined {
+  return state.products.find((p) => p.id === productId);
+}
+
+export function getReviews(productId: ID): Review[] {
+  return state.reviews.filter((r) => r.productId === productId);
+}
+
+export function getLabelPalette(): LabelPaletteColor[] {
+  return state.labelPalette;
+}
+
+// Filter helpers for Catalog
+
+export function getAvailableFilterOptions() {
+  const sizes = new Set<number>();
+  const capColors = new Set<string>();
+  const finishes = new Set<ProductVariant["labelFinish"]>();
+  const paletteIds = new Set<ID>();
+
+  state.products.forEach((product) => {
+    product.variants.forEach((v) => {
+      sizes.add(v.sizeMl);
+      capColors.add(v.capColor);
+      finishes.add(v.labelFinish);
+    });
+    product.labelPaletteIds.forEach((id) => paletteIds.add(id));
+  });
 
   return {
-    success: true,
-    message: "Your note has been folded into our inbox.",
+    sizes: Array.from(sizes).sort((a, b) => a - b),
+    capColors: Array.from(capColors).sort(),
+    labelFinishes: Array.from(finishes),
+    palettes: state.labelPalette.filter((p) => paletteIds.has(p.id)),
   };
-};
-
-// ================ DERIVED HELPERS FOR UI ================
-
-export interface EnrichedCartItem extends CartItem {
-  product: ProductSKU;
-  labelColor?: LabelColorOption;
 }
 
-export const getEnrichedCartItems = (): EnrichedCartItem[] => {
-  return state.cart.items.map((item) => {
-    const product = getProductById(item.productId)!;
-    const labelColor = getLabelColorById(item.labelColorId);
-    return { ...item, product, labelColor };
+export function filterProducts(filters: Filters): Product[] {
+  const { search, sizeMl, capColors, labelFinishes, paletteIds } = filters;
+
+  return state.products.filter((product) => {
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        product.name.toLowerCase().includes(q) ||
+        product.shortDescription.toLowerCase().includes(q) ||
+        product.tags.some((t) => t.toLowerCase().includes(q));
+      if (!matchesSearch) return false;
+    }
+
+    if (paletteIds && paletteIds.length > 0) {
+      const hasPalette = paletteIds.some((id) =>
+        product.labelPaletteIds.includes(id),
+      );
+      if (!hasPalette) return false;
+    }
+
+    if (sizeMl && sizeMl.length > 0) {
+      const variantMatches = product.variants.some((v) =>
+        sizeMl.includes(v.sizeMl),
+      );
+      if (!variantMatches) return false;
+    }
+
+    if (capColors && capColors.length > 0) {
+      const variantMatches = product.variants.some((v) =>
+        capColors.includes(v.capColor),
+      );
+      if (!variantMatches) return false;
+    }
+
+    if (labelFinishes && labelFinishes.length > 0) {
+      const variantMatches = product.variants.some((v) =>
+        labelFinishes.includes(v.labelFinish),
+      );
+      if (!variantMatches) return false;
+    }
+
+    return true;
   });
-};
-
-export interface CartSummary {
-  items: EnrichedCartItem[];
-  subtotal: number;
-  shipping: number;
-  total: number;
 }
 
-export const getCartSummary = (): CartSummary => {
-  const items = getEnrichedCartItems();
-  // computeOrderTotals expects plain CartItem[]; we strip enrichment.
-  const baseItems: CartItem[] = items.map(({ product, labelColor, ...rest }) => rest);
-  const { subtotal, shipping, total } = computeOrderTotals(baseItems);
-  return { items, subtotal, shipping, total };
-};
+// ----------------------
+// Label Design Helpers
+// ----------------------
 
-// Hook-friendly helpers
-export const useCartSummary = (): CartSummary =>
-  useMockStore(() => getCartSummary());
+export function getLabelDesign(productId: ID): LabelDesign | undefined {
+  return state.labelDesigns[productId];
+}
 
-export const useCartCount = (): number =>
-  useMockStore((s) => s.cart.items.reduce((sum, i) => sum + i.quantity, 0));
+export function createDefaultLabelDesign(productId: ID): LabelDesign {
+  const now = new Date().toISOString();
+  const product = getProductById(productId);
+  const paletteId =
+    product?.labelPaletteIds[0] ?? LABEL_PALETTE[0]?.id ?? "amber-velvet";
+  return {
+    id: createId(),
+    productId,
+    backgroundColorId: paletteId,
+    textColorHex: "#2B211A",
+    text: {
+      value: product ? product.name : "Nishant Waters",
+      fontFamily: "serif",
+      size: 20,
+      align: "center",
+    },
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
-export const useProducts = (): ProductSKU[] => useMockStore((s) => s.products);
+export function saveLabelDesign(
+  productId: ID,
+  design: Omit<
+    LabelDesign,
+    "id" | "productId" | "createdAt" | "updatedAt"
+  > &
+    Partial<Pick<LabelDesign, "id" | "createdAt">>,
+): LabelDesign {
+  const existing = state.labelDesigns[productId];
+  const now = new Date().toISOString();
 
-export const useProduct = (productId?: string): ProductSKU | undefined =>
-  useMockStore((s) => (productId ? s.products.find((p) => p.id === productId) : undefined));
+  const merged: LabelDesign = {
+    id: design.id ?? existing?.id ?? createId(),
+    productId,
+    backgroundColorId: design.backgroundColorId,
+    textColorHex: design.textColorHex,
+    text: design.text,
+    createdAt: design.createdAt ?? existing?.createdAt ?? now,
+    updatedAt: now,
+  };
 
-export const useReviewsForProduct = (productId?: string): Review[] =>
-  useMockStore(() => getProductReviews(productId));
+  const nextDesigns: Record<ID, LabelDesign> = {
+    ...state.labelDesigns,
+    [productId]: merged,
+  };
 
-export const useOrders = (): Order[] => useMockStore((s) => s.orders);
+  setState({ labelDesigns: nextDesigns });
+  return merged;
+}
 
-// ================ SUMMARY (DEV NOTE) ================
-// All data and behavior in this file are mocks designed to
-// simulate a backend for the Nishant Waters MVP. When you
-// are ready to integrate a real API, the components can
-// be wired to network calls instead of these helpers.
+export function resetLabelDesign(productId: ID): LabelDesign {
+  const fresh = createDefaultLabelDesign(productId);
+  const next = { ...state.labelDesigns };
+  next[productId] = fresh;
+  setState({ labelDesigns: next });
+  return fresh;
+}
+
+// ----------------------
+// Cart Helpers
+// ----------------------
+
+export function getCart(): CartState {
+  return state.cart;
+}
+
+export function computeCartTotals() {
+  const subtotalCents = state.cart.items.reduce(
+    (sum, item) => sum + item.linePriceCents,
+    0,
+  );
+  const shippingCents = subtotalCents > 0 ? 1200 : 0; // flat mock shipping
+  const taxRate = 0.08;
+  const taxCents = Math.round(subtotalCents * taxRate);
+  const totalCents = subtotalCents + shippingCents + taxCents;
+
+  return { subtotalCents, shippingCents, taxCents, totalCents };
+}
+
+export function addToCart(
+  productId: ID,
+  variantId: ID,
+  quantity: number = 1,
+  design?: LabelDesign,
+): CartItem | null {
+  const product = getProductById(productId);
+  if (!product) return null;
+  const variant = product.variants.find((v) => v.id === variantId);
+  if (!variant) return null;
+
+  const normalizedQty = Math.max(1, quantity);
+
+  const existingIndex = state.cart.items.findIndex(
+    (item) =>
+      item.productId === productId &&
+      item.variantId === variantId &&
+      (!design || item.designId === design.id),
+  );
+
+  const unitPriceCents = variant.priceCents;
+
+  let nextItems: CartItem[];
+
+  if (existingIndex >= 0) {
+    const existing = state.cart.items[existingIndex];
+    const newQty = existing.quantity + normalizedQty;
+    const updated: CartItem = {
+      ...existing,
+      quantity: newQty,
+      linePriceCents: unitPriceCents * newQty,
+    };
+    nextItems = [...state.cart.items];
+    nextItems[existingIndex] = updated;
+  } else {
+    const id = createId();
+    const snapshot = design ? { ...design } : undefined;
+
+    const item: CartItem = {
+      id,
+      productId,
+      variantId,
+      quantity: normalizedQty,
+      designId: design?.id,
+      designSnapshot: snapshot,
+      linePriceCents: unitPriceCents * normalizedQty,
+    };
+    nextItems = [...state.cart.items, item];
+  }
+
+  const nextCart: CartState = { items: nextItems };
+  setState({ cart: nextCart });
+
+  return nextItems[nextItems.length - 1];
+}
+
+export function updateCartItem(itemId: ID, quantity: number): CartItem | null {
+  const idx = state.cart.items.findIndex((item) => item.id === itemId);
+  if (idx === -1) return null;
+
+  if (quantity <= 0) {
+    return removeCartItem(itemId);
+  }
+
+  const current = state.cart.items[idx];
+  const product = getProductById(current.productId);
+  const variant = product?.variants.find((v) => v.id === current.variantId);
+  const unitPriceCents =
+    variant?.priceCents ?? current.linePriceCents / current.quantity;
+
+  const updated: CartItem = {
+    ...current,
+    quantity,
+    linePriceCents: unitPriceCents * quantity,
+  };
+
+  const nextItems = [...state.cart.items];
+  nextItems[idx] = updated;
+
+  const nextCart: CartState = { items: nextItems };
+  setState({ cart: nextCart });
+
+  return updated;
+}
+
+export function removeCartItem(itemId: ID): CartItem | null {
+  const idx = state.cart.items.findIndex((item) => item.id === itemId);
+  if (idx === -1) return null;
+
+  const removed = state.cart.items[idx];
+  const nextItems = state.cart.items.filter((item) => item.id !== itemId);
+  const nextCart: CartState = { items: nextItems };
+  setState({ cart: nextCart });
+
+  return removed;
+}
+
+export function clearCart(): void {
+  setState({ cart: { items: [] } });
+}
+
+// ----------------------
+// Orders
+// ----------------------
+
+export interface CheckoutPayload {
+  address: Address;
+  payment: {
+    cardholderName: string;
+    cardNumber: string; // mock only
+    expiry: string;
+    cvc: string;
+  };
+}
+
+export function getOrders(): Order[] {
+  return state.orders;
+}
+
+export function placeOrder(payload: CheckoutPayload): Order | null {
+  const { items } = state.cart;
+  if (items.length === 0) return null;
+
+  const { subtotalCents, shippingCents, taxCents, totalCents } =
+    computeCartTotals();
+
+  const orderItems: OrderItem[] = items.map((item) => {
+    const product = getProductById(item.productId);
+    const variant = product?.variants.find((v) => v.id === item.variantId);
+    const unitPriceCents =
+      variant?.priceCents ?? item.linePriceCents / item.quantity;
+    return {
+      id: createId(),
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      unitPriceCents,
+      lineTotalCents: unitPriceCents * item.quantity,
+      designSnapshot: item.designSnapshot,
+    };
+  });
+
+  const now = new Date().toISOString();
+  const cardLast4 = payload.payment.cardNumber.slice(-4) || "0000";
+
+  const order: Order = {
+    id: createId(),
+    createdAt: now,
+    updatedAt: now,
+    items: orderItems,
+    subtotalCents,
+    shippingCents,
+    taxCents,
+    totalCents,
+    status: "confirmed",
+    shippingAddress: { ...payload.address },
+    payment: {
+      cardholderName: payload.payment.cardholderName,
+      cardLast4,
+      brand: "Mock Card",
+    },
+  };
+
+  const nextOrders = [...state.orders, order];
+
+  setState({ orders: nextOrders, cart: { items: [] } });
+
+  return order;
+}
+
+// ----------------------
+// Convenience Selectors
+// ----------------------
+
+export function getCartItemCount(): number {
+  return state.cart.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+export function getAverageRating(productId: ID): number {
+  const reviews = getReviews(productId);
+  if (reviews.length === 0) return 0;
+  const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+  return total / reviews.length;
+}
+
+// ----------------------
+// Summary (for debugging / dev tools)
+// ----------------------
+
+export function getDebugSummary() {
+  const { subtotalCents, shippingCents, taxCents, totalCents } =
+    computeCartTotals();
+  return {
+    version: state.version,
+    productCount: state.products.length,
+    cartItems: state.cart.items.length,
+    orders: state.orders.length,
+    subtotal: formatCurrency(subtotalCents),
+    shipping: formatCurrency(shippingCents),
+    tax: formatCurrency(taxCents),
+    total: formatCurrency(totalCents),
+  };
+}
+
+// This file is the single mock data + state source of truth for the entire app.
+// All interactions are purely client-side and persisted only to localStorage.

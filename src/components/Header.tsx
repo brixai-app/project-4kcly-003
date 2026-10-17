@@ -1,223 +1,221 @@
 import React from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu } from "lucide-react";
 
-import { Button, Sheet, SheetContent, SheetTrigger } from "@/components/ui/shadcn";
-import { useCartCount } from "@/mock";
+import { Button, Badge, Sheet, SheetContent, SheetTrigger } from "@/components/ui/shadcn";
+import { getCartItemCount } from "@/mock";
 
-interface HeaderProps {
+// NOTE: This header is 100% frontend-only and reads cart count from the mocked
+// state in src/mock.ts, which persists to localStorage. There is no backend.
+
+export interface HeaderProps {
   onOpenCart: () => void;
 }
 
-const navLinks: { label: string; to: string }[] = [
-  { label: "Home", to: "/" },
-  { label: "Shop", to: "/catalog" },
-  { label: "About", to: "/about" },
-  { label: "Contact", to: "/contact" },
+interface NavItem {
+  label: string;
+  path: string;
+}
+
+// Fallback NAV_LINKS; in a fuller app this could be imported from a routes module.
+const NAV_LINKS: NavItem[] = [
+  { label: "Home", path: "/" },
+  { label: "Shop", path: "/shop" },
+  { label: "About", path: "/about" },
+  { label: "Contact", path: "/contact" },
 ];
 
-const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const cartCount = useCartCount();
+const linkUnderlineVariants = {
+  initial: { width: 0, opacity: 0 },
+  hover: { width: "100%", opacity: 1 },
+};
 
-  const isActivePath = (to: string) => {
-    if (to === "/") return location.pathname === "/";
-    return location.pathname.startsWith(to);
+export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
+  const location = useLocation();
+  const [cartCount, setCartCount] = React.useState<number>(() => getCartItemCount());
+
+  // Polling the mock state for simplicity; in a larger app we'd subscribe
+  React.useEffect(() => {
+    const id = window.setInterval(() => {
+      setCartCount(getCartItemCount());
+    }, 400);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const isActivePath = (path: string) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur border-b border-[rgba(148,92,46,0.3)] bg-gradient-to-r from-[#1f1410]/90 via-[#2b211a]/90 to-[#1c1310]/90 text-amber-50">
-      <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12 flex h-16 lg:h-20 items-center justify-between gap-4">
-        {/* Brand */}
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="group flex items-center gap-2 lg:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2c29b] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-full"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="h-9 w-9 lg:h-10 lg:w-10 rounded-full bg-[radial-gradient(circle_at_30%_0,#f2c29b,#914b1a)] shadow-md shadow-black/30 flex items-center justify-center"
+    <header className="w-full bg-[#f3e6d9]/95 backdrop-blur border-b border-[#d2bba3] text-[#2b211a] sticky top-0 z-40">
+      {/* Skip link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-6 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#3f2a23] focus:text-[#fdf7ef] focus:rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#b56a3c]"
+      >
+        Skip to content
+      </a>
+
+      <div className="w-full px-6 lg:px-12">
+        <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between py-4 gap-4">
+          {/* Brand */}
+          <NavLink
+            to="/"
+            className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b56a3c] rounded-full pr-2 -ml-1"
+            aria-label="Nishant Waters home"
           >
-            <span className="h-5 w-5 rounded-full border border-amber-50/60" />
-          </motion.div>
+            <div className="h-8 w-1.5 rounded-full bg-gradient-to-b from-[#b56a3c] to-[#e0c3a3] group-hover:scale-y-110 transition-transform duration-300" />
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl md:text-2xl tracking-[0.22em] uppercase font-semibold text-[#3f2a23] leading-tight">
+                NISHANT
+              </span>
+              <span className="text-[0.76rem] tracking-[0.3em] uppercase text-[#7b5b43]">
+                WATERS
+              </span>
+            </div>
+          </NavLink>
 
-          <div className="flex flex-col items-start leading-tight">
-            <span className="text-[1.25rem] leading-none tracking-[0.18em] uppercase text-amber-50 font-semibold">
-              Nishant
-            </span>
-            <span className="text-xs tracking-[0.28em] uppercase text-amber-100/80">
-              Waters
-            </span>
-          </div>
-        </button>
-
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center gap-8 lg:gap-10 text-sm lg:text-[0.95rem] tracking-[0.18em] uppercase">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                [
-                  "relative inline-flex items-center pb-0.5 transition-colors duration-200",
-                  "text-amber-100/80 hover:text-amber-50",
-                  (isActive || isActivePath(link.to)) && "text-amber-50",
-                ]
-                  .filter(Boolean)
-                  .join(" ")
-              }
-            >
-              {({ isActive }) => (
-                <motion.span
-                  whileHover={{ y: -1 }}
-                  className="inline-flex items-center gap-1"
+          {/* Desktop nav */}
+          <nav
+            className="hidden md:flex items-center gap-8 text-sm tracking-[0.18em] uppercase"
+            aria-label="Primary"
+          >
+            {NAV_LINKS.map(link => {
+              const active = isActivePath(link.path);
+              return (
+                <NavLink
+                  key={link.path}
+                  to={link.path}
+                  className={({ isActive }) =>
+                    [
+                      "relative pb-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-[#b56a3c] rounded-none",
+                      "transition-colors duration-200",
+                      (active || isActive)
+                        ? "text-[#3f2a23]"
+                        : "text-[#8b6a52] hover:text-[#3f2a23]",
+                    ].join(" ")
+                  }
                 >
-                  <span>{link.label}</span>
-                  <motion.span
-                    layoutId={isActive ? `nav-underline-${link.to}` : undefined}
-                    className="absolute -bottom-1 left-0 h-[1px] w-full bg-gradient-to-r from-[#f2c29b] via-[#d28c45] to-transparent"
-                    initial={{ opacity: 0, scaleX: 0 }}
-                    animate={{
-                      opacity: isActive || isActivePath(link.to) ? 1 : 0,
-                      scaleX: isActive || isActivePath(link.to) ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                  />
-                </motion.span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+                  {({ isActive }) => (
+                    <span className="inline-flex flex-col items-center">
+                      <span>{link.label}</span>
+                      <motion.span
+                        className="h-[1px] bg-[#b56a3c] mt-1"
+                        variants={linkUnderlineVariants}
+                        initial="initial"
+                        animate={active || isActive ? "hover" : "initial"}
+                        whileHover="hover"
+                        transition={{ duration: 0.22, ease: "easeOut" }}
+                      />
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
 
-        {/* Right side actions */}
-        <div className="flex items-center gap-2 lg:gap-3">
-          {/* Cart button */}
-          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+          {/* Actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Cart button desktop */}
             <Button
-              type="button"
               variant="outline"
+              size="sm"
               onClick={onOpenCart}
-              className="relative flex items-center gap-2 rounded-full border-amber-200/30 bg-[#2b211a]/60 hover:bg-[#2b211a] text-amber-50 px-3 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm font-medium tracking-[0.18em] uppercase"
+              className="hidden sm:inline-flex items-center gap-2 border-[#d2bba3] text-[#3f2a23] bg-[#fdf7ef]/70 hover:bg-[#e9d7c3] hover:border-[#b56a3c] rounded-full px-4 py-1.5 text-xs tracking-[0.18em] uppercase transition-colors duration-200"
+              aria-label={cartCount > 0 ? `Open cart with ${cartCount} items` : "Open cart"}
             >
-              <ShoppingBag className="h-4 w-4" />
-              <span className="hidden sm:inline">Cart</span>
-              {cartCount > 0 && (
-                <span className="ml-1 inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-[#f2c29b] text-[0.7rem] font-semibold leading-none text-[#2b211a] px-1.5 py-[3px] shadow-sm shadow-black/30">
-                  {cartCount}
-                </span>
-              )}
+              <span className="relative flex items-center">
+                <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                {cartCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-2 -right-2 min-w-[1.2rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-[#b56a3c] text-[0.65rem] font-medium text-[#fdf7ef] border border-[#3f2a23]/20 shadow-sm"
+                  >
+                    {cartCount}
+                  </Badge>
+                )}
+              </span>
+              <span className="hidden md:inline">Cart</span>
             </Button>
-          </motion.div>
 
-          {/* Mobile menu */}
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200/30 bg-[#2b211a]/60 text-amber-50 hover:bg-[#2b211a]"
-                  aria-label="Open navigation menu"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-[260px] sm:w-[300px] border-l border-amber-900/40 bg-[#1b1410]/95 backdrop-blur-md px-0 py-0 text-amber-50"
+            {/* Mobile menu + cart */}
+            <div className="flex items-center gap-1 md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenCart}
+                aria-label={cartCount > 0 ? `Open cart with ${cartCount} items` : "Open cart"}
+                className="relative rounded-full text-[#3f2a23] hover:bg-[#e9d7c3]"
               >
-                <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-amber-900/40">
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-sm font-semibold tracking-[0.24em] uppercase text-amber-50">
+                <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+                {cartCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-[#b56a3c] text-[0.65rem] font-medium text-[#fdf7ef] border border-[#3f2a23]/20 shadow-sm"
+                  >
+                    {cartCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-[#3f2a23] hover:bg-[#e9d7c3]"
+                    aria-label="Open navigation menu"
+                  >
+                    <Menu className="h-5 w-5" aria-hidden="true" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-[260px] sm:w-[300px] bg-[#f7ebdf] border-r border-[#d2bba3] text-[#2b211a] px-6 pt-10 flex flex-col gap-6"
+                  aria-label="Mobile navigation"
+                >
+                  <div className="flex flex-col gap-1 mb-4">
+                    <span className="text-xs tracking-[0.28em] uppercase text-[#aa7e57]">Navigate</span>
+                    <span className="text-base font-semibold tracking-[0.18em] uppercase text-[#3f2a23]">
                       Nishant Waters
                     </span>
-                    <span className="text-[0.65rem] tracking-[0.24em] uppercase text-amber-200/80">
-                      Custom bottled details
-                    </span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 w-8 rounded-full text-amber-100 hover:bg-amber-900/40"
-                    aria-label="Close navigation menu"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
 
-                <nav className="flex flex-col gap-1 px-3 pt-3 pb-4 text-xs tracking-[0.2em] uppercase">
-                  {navLinks.map((link) => {
-                    const active = isActivePath(link.to);
-                    return (
-                      <MobileNavItem key={link.to} to={link.to} active={active} />
-                    );
-                  })}
-                </nav>
+                  <nav className="flex flex-col gap-3" aria-label="Primary mobile">
+                    {NAV_LINKS.map(link => {
+                      const active = isActivePath(link.path);
+                      return (
+                        <NavLink
+                          key={link.path}
+                          to={link.path}
+                          className={({ isActive }) =>
+                            [
+                              "text-sm tracking-[0.18em] uppercase py-1.5 border-b",
+                              "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b56a3c]",
+                              active || isActive
+                                ? "border-[#b56a3c] text-[#3f2a23]"
+                                : "border-transparent text-[#8b6a52] hover:text-[#3f2a23] hover:border-[#d2bba3]",
+                            ].join(" ")
+                          }
+                        >
+                          {link.label}
+                        </NavLink>
+                      );
+                    })}
+                  </nav>
 
-                <div className="px-6 pb-6 border-t border-amber-900/40 pt-4 text-[0.7rem] leading-relaxed text-amber-100/80">
-                  <p className="mb-2 font-medium tracking-[0.2em] uppercase text-amber-200">
-                    Quietly present.
-                  </p>
-                  <p>
-                    Custom-labeled water for hotels, studios, and gatherings where every detail is considered.
-                  </p>
-                </div>
-              </SheetContent>
-            </Sheet>
+                  <div className="mt-auto pt-4 text-xs text-[#8b6a52] tracking-[0.16em] uppercase">
+                    Crafted as a mock, client-side only experience.
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </div>
     </header>
-  );
-};
-
-interface MobileNavItemProps {
-  to: string;
-  active: boolean;
-}
-
-const MobileNavItem: React.FC<MobileNavItemProps> = ({ to, active }) => {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => {
-        const selected = isActive || active;
-        return [
-          "relative flex items-center justify-between rounded-full px-4 py-2 transition-colors duration-200",
-          selected
-            ? "bg-amber-900/40 text-amber-50"
-            : "text-amber-100/80 hover:bg-amber-900/25 hover:text-amber-50",
-        ]
-          .filter(Boolean)
-          .join(" ");
-      }}
-    >
-      {({ isActive }) => {
-        const selected = isActive || active;
-        return (
-          <>
-            <motion.span
-              className="flex-1"
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              {to === "/" ? "Home" : to.replace("/", "").replace(/^[a-z]/, (c) => c.toUpperCase())}
-            </motion.span>
-            {selected && (
-              <motion.span
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="ml-2 h-1.5 w-1.5 rounded-full bg-[#f2c29b] shadow-sm shadow-black/40"
-              />
-            )}
-          </>
-        );
-      }}
-    </NavLink>
   );
 };
 

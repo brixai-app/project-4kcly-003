@@ -1,7 +1,7 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingBag, Droplet } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShoppingBag } from "lucide-react";
 
 import {
   Card,
@@ -11,215 +11,240 @@ import {
   CardContent,
   CardFooter,
   Button,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
+  Badge,
 } from "@/components/ui/shadcn";
 
-import { ProductSKU, LabelColorOption, addToCart, formatMoney } from "@/mock";
-import { showToastSuccess, showToastError } from "./ToastProvider";
+import { Product, ProductVariant } from "@/mock";
+import { formatCurrency } from "@/mock";
 
 export interface ProductCardProps {
-  product: ProductSKU;
+  product: Product;
   /**
-   * Optional: preselected label color id to highlight or use for quick add.
-   * If not provided, the product's first label color will be used.
+   * Optional variant to highlight (e.g. default variant). If not provided,
+   * the first variant will be used for price display and add-to-cart.
    */
-  defaultLabelColorId?: string;
-  /** When true, shows a compact layout suited for dense grids. */
-  compact?: boolean;
+  primaryVariant?: ProductVariant;
+  /**
+   * Callback invoked when the user presses the primary CTA.
+   * Parent is responsible for calling mock.addToCart and showing Sonner toast.
+   */
+  onAddToCart: (productId: string, variantId: string) => void;
+  /**
+   * Optional callback when user clicks anywhere on the card body to view details.
+   * If not provided, the card will navigate to `/product/${product.slug}`.
+   */
+  onOpenDetail?: (productId: string) => void;
+  /**
+   * Used by masonry layouts to slightly vary height / emphasis.
+   */
+  layoutVariant?: "tall" | "wide" | "standard";
 }
 
-const imageVariants = {
-  initial: { scale: 1.02, opacity: 0.85 },
-  hover: { scale: 1.06, opacity: 1 },
-};
-
-const cardVariants = {
-  initial: { y: 0, boxShadow: "0 0 0 rgba(0,0,0,0)" },
+const hoverVariants = {
+  rest: {
+    y: 0,
+    boxShadow: "0 10px 30px rgba(15, 10, 6, 0.08)",
+  },
   hover: {
-    y: -4,
-    boxShadow:
-      "0 18px 40px rgba(0,0,0,0.18)",
-    transition: { type: "spring", stiffness: 280, damping: 22 },
+    y: -6,
+    boxShadow: "0 18px 45px rgba(15, 10, 6, 0.18)",
   },
 };
 
-const swatchRingClass =
-  "relative flex h-6 w-6 items-center justify-center rounded-full border border-black/5 dark:border-white/10";
+const imageParallaxVariants = {
+  rest: { scale: 1, y: 0 },
+  hover: { scale: 1.04, y: -4 },
+};
 
-const ProductCard: React.FC<ProductCardProps> = ({
+export const ProductCard: React.FC<ProductCardProps> = ({
   product,
-  defaultLabelColorId,
-  compact,
+  primaryVariant,
+  onAddToCart,
+  onOpenDetail,
+  layoutVariant = "standard",
 }) => {
-  const [hovered, setHovered] = React.useState(false);
-  const [activeColorId, setActiveColorId] = React.useState<string | undefined>(
-    defaultLabelColorId ?? product.labelColors[0]?.id,
-  );
-  const [isAdding, setIsAdding] = React.useState(false);
+  const navigate = useNavigate();
 
-  const activeColor: LabelColorOption | undefined = React.useMemo(() => {
-    return (
-      product.labelColors.find((c) => c.id === activeColorId) ||
-      product.labelColors[0]
-    );
-  }, [product.labelColors, activeColorId]);
+  const variant = primaryVariant ?? product.variants[0];
 
-  const handleQuickAdd = () => {
-    if (!activeColor) {
-      showToastError("Choose a label tone", "Select a label color before adding.");
-      return;
-    }
-    setIsAdding(true);
-    try {
-      const item = addToCart({
-        productId: product.id,
-        labelColorId: activeColor.id,
-        quantity: 1,
-      });
-      if (!item) {
-        showToastError("Could not add to cart", "Please try again.");
-        return;
-      }
-      showToastSuccess("Added to cart", `${product.name} · ${activeColor.name}`);
-    } finally {
-      setTimeout(() => setIsAdding(false), 350);
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!variant) return;
+    onAddToCart(product.id, variant.id);
+  };
+
+  const handleOpenDetail = () => {
+    if (onOpenDetail) {
+      onOpenDetail(product.id);
+    } else {
+      navigate(`/product/${product.slug}`);
     }
   };
 
+  const heightClass =
+    layoutVariant === "tall"
+      ? "min-h-[420px]"
+      : layoutVariant === "wide"
+      ? "min-h-[360px]"
+      : "min-h-[380px]";
+
+  const backgroundTint = product.baseColor || "#B56A3C";
+
   return (
     <motion.div
-      variants={cardVariants}
-      initial="initial"
-      animate={hovered ? "hover" : "initial"}
-      onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
-      className="h-full"
+      initial="rest"
+      whileHover="hover"
+      animate="rest"
+      variants={hoverVariants}
+      className="w-full transition-shadow duration-200"
     >
       <Card
-        className="flex h-full flex-col overflow-hidden border border-black/5 bg-[rgba(247,241,232,0.96)]/90 shadow-sm backdrop-blur-sm transition-colors duration-200 dark:border-white/10 dark:bg-[rgba(32,23,18,0.98)]"
+        role="article"
+        aria-label={product.name}
+        className={`group relative flex h-full flex-col overflow-hidden border border-[#e2d3c4]/70 bg-[#f7efe6]/90 text-[#2b211a] shadow-sm backdrop-blur-sm ${heightClass}`}
+        style={{
+          // subtle left border accent using base color
+          boxShadow:
+            "inset 3px 0 0 0 rgba(181, 106, 60, 0.4), 0 10px 30px rgba(15, 10, 6, 0.06)",
+        }}
+        onClick={handleOpenDetail}
       >
-        <CardHeader className="space-y-2 pb-3">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#f2c29b] via-[#f7f1e8] to-[#f3e6d6] dark:from-[#5b3420] dark:via-[#2b211a] dark:to-[#5b3420]">
-            <div className="relative aspect-[4/5] w-full overflow-hidden">
-              <motion.img
-                src={product.imageUrl}
-                loading="lazy"
-                decoding="async"
-                alt={product.name}
-                className="h-full w-full object-cover"
-                variants={imageVariants}
-                initial="initial"
-                animate={hovered ? "hover" : "initial"}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+        <CardHeader className="relative flex flex-col gap-3 p-4 sm:p-5">
+          <div className="relative overflow-hidden rounded-xl bg-[#e8dbcd]">
+            <motion.div
+              variants={imageParallaxVariants}
+              className="relative h-56 w-full overflow-hidden sm:h-64"
+            >
+              <div
+                className="absolute inset-0 opacity-60"
+                style={{
+                  background:
+                    "radial-gradient(circle at 10% 0, rgba(255, 255, 255, 0.55), transparent 55%), radial-gradient(circle at 90% 100%, rgba(61, 40, 30, 0.35), transparent 60%)",
+                }}
               />
-
-              {/* Label band overlay to hint customization */}
-              {activeColor && (
-                <div className="pointer-events-none absolute inset-x-6 bottom-7 flex items-center justify-between">
-                  <div
-                    className="h-8 flex-1 rounded-full border border-black/10/40 shadow-sm dark:border-white/10"
-                    style={{
-                      backgroundColor: activeColor.hex,
-                    }}
-                  />
-                  <div className="ml-3 flex items-center rounded-full bg-black/65 px-3 py-1 text-xs font-medium tracking-wide text-[#f7f1e8] shadow-sm backdrop-blur-sm dark:bg-white/80 dark:text-[#2b211a]">
-                    <Droplet className="mr-1.5 h-3.5 w-3.5" />
-                    {activeColor.name}
-                  </div>
-                </div>
+              <img
+                src={product.heroImage}
+                alt={product.name}
+                className="relative z-[1] h-full w-full object-cover object-center transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+            </motion.div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-3 bottom-2 flex justify-between text-[11px] font-medium uppercase tracking-[0.18em] text-[#5c4635]/80"
+            >
+              <span>{variant?.sizeMl ? `${variant.sizeMl}ml` : "Custom"}</span>
+              {variant && (
+                <span>
+                  {variant.capColor} 
+                  <span className="mx-1 text-[#b56a3c]">·</span>
+                  {variant.labelFinish} label
+                </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-3 pt-3">
-            <div className="space-y-1">
-              <CardTitle className="font-['Playfair_Display'] text-lg tracking-tight text-[#2b211a] dark:text-[#f7f1e8]">
-                {product.name}
-              </CardTitle>
-              <CardDescription className="text-xs uppercase tracking-[0.16em] text-[#5b3420]/80 dark:text-[#f3e6d6]/70">
-                {product.capacityMl} ml · Min. {product.minOrderQty} units
-              </CardDescription>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="font-medium text-[#914b1a] dark:text-[#f2c29b]">
-                {formatMoney(product.price)}
-              </p>
-              <p className="text-[11px] text-[#5b3420]/70 dark:text-[#f3e6d6]/60">
-                per bottle
-              </p>
-            </div>
+          <div className="flex flex-col gap-2">
+            <CardTitle className="font-serif text-lg font-semibold tracking-tight text-[#241810] sm:text-xl">
+              {product.name}
+            </CardTitle>
+            <CardDescription className="text-[13px] leading-relaxed text-[#6b5645] sm:text-sm">
+              {product.shortDescription}
+            </CardDescription>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-3 pb-3 text-sm text-[#2b211a]/80 dark:text-[#f7f1e8]/80">
-          <p className="line-clamp-2 leading-relaxed">
-            {product.shortDescription}
-          </p>
+        <CardContent className="flex flex-1 flex-col justify-between gap-3 px-4 pb-3 pt-0 sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            {product.tags.slice(0, 3).map(tag => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className="border-[#d0b399] bg-[#f6ece1] px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#7a5a3e]"
+              >
+                {tag}
+              </Badge>
+            ))}
+            {product.tags.length > 3 && (
+              <Badge
+                variant="outline"
+                className="border-transparent bg-[#e4d2c0]/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-[#7a5a3e]"
+              >
+                +{product.tags.length - 3}
+              </Badge>
+            )}
+          </div>
 
-          {/* Label color swatches */}
-          {product.labelColors.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[#5b3420]/70 dark:text-[#f3e6d6]/60">
-                Label palette
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {product.labelColors.map((color) => {
-                  const isActive = activeColor?.id === color.id;
-                  return (
-                    <Tooltip key={color.id}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setActiveColorId(color.id)}
-                          aria-label={`Use ${color.name} label`}
-                          className={`${swatchRingClass} transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d28c45] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f1e8] dark:focus-visible:ring-[#f2c29b] dark:focus-visible:ring-offset-[#2b211a] ${
-                            isActive
-                              ? "ring-2 ring-[#d28c45] ring-offset-2 ring-offset-[#f7f1e8] dark:ring-[#f2c29b] dark:ring-offset-[#2b211a]"
-                              : ""
-                          }`}
-                        >
-                          <span
-                            className="inline-block h-4 w-4 rounded-full border border-black/10 shadow-sm dark:border-black/40"
-                            style={{ backgroundColor: color.hex }}
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="bg-[#2b211a] text-[#f7f1e8]">
-                        <p className="text-xs">{color.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
+          <div className="mt-2 flex items-end justify-between gap-2">
+            <div className="flex flex-col">
+              {variant && (
+                <span className="font-sans text-base font-semibold text-[#2b211a] sm:text-lg">
+                  {formatCurrency(variant.priceCents)}
+                </span>
+              )}
+              {variant && (
+                <span className="text-[11px] uppercase tracking-[0.16em] text-[#85614a]">
+                  per bottle • {variant.labelFinish} finish
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col items-end text-[11px] text-[#8b6b52]">
+              <span className="uppercase tracking-[0.18em]">Label tones</span>
+              <div className="mt-1 flex items-center gap-1.5">
+                {product.labelPaletteIds.slice(0, 4).map(id => (
+                  <span
+                    key={id}
+                    aria-hidden="true"
+                    className="h-4 w-4 rounded-full border border-[#f8efe5] shadow-[0_0_0_1px_rgba(80,54,36,0.22)]"
+                    style={{
+                      backgroundColor:
+                        id === "amber-velvet"
+                          ? "#B56A3C"
+                          : id === "smoked-ivory"
+                          ? "#E3D5C6"
+                          : id === "midnight-caramel"
+                          ? "#3F2A23"
+                          : id === "linen-foam"
+                          ? "#F4E9DD"
+                          : id === "burnt-citrus"
+                          ? "#C16A32"
+                          : id === "soft-cacao"
+                          ? "#8D5A3A"
+                          : backgroundTint,
+                    }}
+                  />
+                ))}
               </div>
             </div>
-          )}
+          </div>
         </CardContent>
 
-        <CardFooter className="flex items-center justify-between gap-3 border-t border-black/5 bg-[#f7f1e8]/80 px-5 py-4 dark:border-white/10 dark:bg-[#241a15]">
-          <Button
-            variant="outline"
-            asChild
-            className="group border-[#d28c45]/60 bg-white/70 text-[#5b3420] shadow-none transition-colors duration-200 hover:border-[#b46a2b] hover:bg-[#f3e6d6] hover:text-[#2b211a] dark:border-[#f2c29b]/50 dark:bg-transparent dark:text-[#f7f1e8] dark:hover:border-[#f2c29b] dark:hover:bg-[#5b3420]/60"
-          >
-            <Link to={`/product/${product.slug}`} aria-label={`Customize ${product.name}`}>
-              <span className="flex items-center text-xs font-medium uppercase tracking-[0.16em]">
-                <span className="mr-1.5 inline-block h-[1px] w-3 bg-[#d28c45] transition-all duration-200 group-hover:w-4 group-hover:bg-[#b46a2b] dark:bg-[#f2c29b]" />
-                Customize
-              </span>
-            </Link>
-          </Button>
-
+        <CardFooter className="mt-auto flex items-center justify-between gap-3 border-t border-[#dec7b1]/80 bg-[#f3e5d3]/70 px-4 py-3.5 sm:px-5">
           <Button
             type="button"
-            onClick={handleQuickAdd}
-            disabled={isAdding}
-            className="inline-flex items-center justify-center rounded-full bg-[#b46a2b] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#f7f1e8] shadow-md transition-[background-color,box-shadow] duration-200 hover:bg-[#914b1a] hover:shadow-lg disabled:cursor-not-allowed disabled:bg-[#d28c45]/70 dark:bg-[#f2c29b] dark:text-[#2b211a] dark:hover:bg-[#f7f1e8]"
+            variant="outline"
+            size="sm"
+            className="border-transparent bg-transparent px-0 text-[11px] font-medium uppercase tracking-[0.18em] text-[#7b5f46] underline-offset-4 hover:bg-transparent hover:text-[#503423] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c6854e]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3e5d3]"
           >
-            <ShoppingBag className="mr-1.5 h-3.5 w-3.5" />
-            {isAdding ? "Adding" : compact ? "Quick add" : "Add to cart"}
+            Details
           </Button>
+
+          <motion.div
+            whileTap={{ scale: 0.96, y: 1 }}
+            className="shrink-0"
+          >
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAddToCart}
+              disabled={!variant}
+              className="inline-flex items-center gap-2 rounded-full border border-[#b56a3c] bg-[#b56a3c] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#f8efe5] shadow-[0_8px_20px_rgba(58,32,16,0.35)] transition-colors duration-200 hover:border-[#8f5027] hover:bg-[#8f5027] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f0d3b8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3e5d3] disabled:cursor-not-allowed disabled:border-[#d6b59a] disabled:bg-[#d6b59a] disabled:text-[#f7efe6]"
+            >
+              <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Add to cart</span>
+            </Button>
+          </motion.div>
         </CardFooter>
       </Card>
     </motion.div>
